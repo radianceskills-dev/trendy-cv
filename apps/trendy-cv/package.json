@@ -1,0 +1,20 @@
+{
+	"name": "trendy-cv",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite --host 127.0.0.1",
+		"build": "vite build"
+	},
+	"dependencies": {
+		"@reactive-resume/import": "workspace:*",
+		"@reactive-resume/schema": "workspace:*",
+		"@reactive-resume/pdf": "workspace:*",
+		"react": "^19.3.0",
+		"react-dom": "^19.3.0"
+	},
+	"devDependencies": {
+		"vite": "^8.0.0",
+		"@vitejs/plugin-react": "^6.0.0"
+	}
+}
