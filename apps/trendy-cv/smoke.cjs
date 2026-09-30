@@ -81,7 +81,9 @@ const assert = require("node:assert/strict");
 				};
 			else if (prompt.startsWith("Optimize")) result = { skillGroups: [[1, 0]], note: "Grouped confirmed skills" };
 			else throw Error("Unexpected request");
-			await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(result) } }] } });
+			// Exercise repair in target, extraction, review, and optimization requests.
+			const malformed = `\`\`\`json\n${JSON.stringify(result).replace(/}$/, ",}")}\n\`\`\``;
+			await route.fulfill({ json: { choices: [{ message: { content: malformed } }] } });
 		});
 		await page.goto(`http://127.0.0.1:${server.address().port}/tools/cv-builder/`);
 		await page.getByLabel("Roles you are interested in").fill("Engineer");

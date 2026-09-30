@@ -125,6 +125,7 @@ export function Wizard() {
 	const [optimization, setOptimization] = useState<Optimization | null>(null);
 	const [shownSkills, setShownSkills] = useState<string[]>([]);
 	const [busy, setBusy] = useState(false);
+	const [reviewProgress, setReviewProgress] = useState("");
 	const [error, setError] = useState("");
 	const [ready, setReady] = useState(false);
 	const [saved, setSaved] = useState("");
@@ -231,6 +232,9 @@ export function Wizard() {
 		const c = new AbortController();
 		workController.current = c;
 		setBusy(true);
+		setReviewProgress(
+			mode === "text" ? "Step 1 of 2: Extracting CV details…" : "Reviewing your CV for missing information…",
+		);
 		setError("");
 		try {
 			const t = target || (await targetPromise.current);
@@ -239,6 +243,7 @@ export function Wizard() {
 				mode === "text" ? validateCV(await requestJSON(CV_PROMPT, { cvText: raw }, c.signal)) : validateCV(cv);
 			if (c.signal.aborted || id !== runId.current) return;
 			const { name, email, phone, location, ...content } = structured;
+			setReviewProgress("Checking missing information and preparing suggestions…");
 			const changes = validateSuggestions(await requestJSON(REVIEW_PROMPT, { target: t, cv: content }, c.signal));
 			if (c.signal.aborted || id !== runId.current) return;
 			setCV(structured);
@@ -484,7 +489,7 @@ export function Wizard() {
 							only career content is sent for recommendations; contact fields remain local.
 						</p>
 						<button type="button" disabled={busy || !target} onClick={reviewCV}>
-							{busy ? "Structuring and reviewing…" : "Next: Structure and review"}
+							{busy ? reviewProgress : "Next: Structure and review"}
 						</button>
 					</section>
 				)}

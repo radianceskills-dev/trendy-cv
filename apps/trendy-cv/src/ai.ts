@@ -1,4 +1,9 @@
-type Payload = { choices?: { message?: { content?: string } }[]; message?: { content?: string } };
+import { parseAIJSON, withDeadline } from "./ai-json.mjs";
+
+type Payload = {
+	choices?: { finish_reason?: string; message?: { content?: string } }[];
+	message?: { content?: string };
+};
 type PuterWindow = Window & {
 	puter?: {
 		ai: {
@@ -21,7 +26,11 @@ export function settings() {
 	if (!endpoint || new URL(endpoint).protocol !== "https:") throw Error("An HTTPS AI endpoint is required.");
 	return { ...s, endpoint };
 }
-export async function requestJSON(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
+export function requestJSON(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
+	return withDeadline((requestSignal: AbortSignal) => requestJSONOnce(system, input, requestSignal), signal);
+}
+
+async function requestJSONOnce(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
 	const s = settings();
 	const messages = [
 		{
@@ -54,11 +63,12 @@ export async function requestJSON(system: string, input: unknown, signal: AbortS
 		payload = await r.json();
 	}
 	if (signal.aborted) throw Error("Cancelled");
+	if (typeof payload !== "string" && payload?.choices?.[0]?.finish_reason === "length") {
+		throw Error("AI output was cut off. Shorten the CV text or choose a model with a larger output limit, then retry.");
+	}
 	const content =
 		typeof payload === "string" ? payload : (payload?.choices?.[0]?.message?.content ?? payload?.message?.content);
-	if (!content) throw Error("AI returned no text");
-	if (content.length > 100000) throw Error("AI response is too large.");
-	return JSON.parse(content);
+	return parseAIJSON(content);
 }
 
 export async function rewrite(text: string, instruction: string, signal: AbortSignal): Promise<string> {
