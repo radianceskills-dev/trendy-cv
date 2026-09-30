@@ -1,4 +1,5 @@
 import { parseAIJSON, withDeadline } from "./ai-json.mjs";
+import { parseReviewYAML } from "./review.mjs";
 
 type Payload = {
 	choices?: { finish_reason?: string; message?: { content?: string } }[];
@@ -27,10 +28,20 @@ export function settings() {
 	return { ...s, endpoint };
 }
 export function requestJSON(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
-	return withDeadline((requestSignal: AbortSignal) => requestJSONOnce(system, input, requestSignal), signal);
+	return withDeadline(
+		async (requestSignal: AbortSignal) => parseAIJSON(await requestText(system, input, requestSignal)),
+		signal,
+	);
 }
 
-async function requestJSONOnce(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
+export function requestReview(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
+	return withDeadline(
+		async (requestSignal: AbortSignal) => parseReviewYAML(await requestText(system, input, requestSignal)),
+		signal,
+	);
+}
+
+async function requestText(system: string, input: unknown, signal: AbortSignal): Promise<string> {
 	const s = settings();
 	const messages = [
 		{
@@ -68,7 +79,8 @@ async function requestJSONOnce(system: string, input: unknown, signal: AbortSign
 	}
 	const content =
 		typeof payload === "string" ? payload : (payload?.choices?.[0]?.message?.content ?? payload?.message?.content);
-	return parseAIJSON(content);
+	if (typeof content !== "string" || !content.trim()) throw Error("AI returned no text.");
+	return content;
 }
 
 export async function rewrite(text: string, instruction: string, signal: AbortSignal): Promise<string> {

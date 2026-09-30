@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { defaultResumeData } from "@reactive-resume/schema/resume/default";
-import { requestJSON } from "./ai";
+import { requestJSON, requestReview } from "./ai";
+import { applyReviewChange, REVIEW_YAML_PROMPT, validateReview } from "./review.mjs";
 import {
 	approvedSkills,
 	CV_FIELDS,
@@ -9,19 +10,17 @@ import {
 	escapeHTML,
 	FORMATS,
 	OPTIMIZE_PROMPT,
-	REVIEW_PROMPT,
 	TARGET_PROMPT,
 	THEMES,
 	validateCV,
 	validateOptimization,
-	validateSuggestions,
 	validateTarget,
 } from "./wizard-model.mjs";
 import "./wizard.css";
 
 type CV = ReturnType<typeof emptyCV>;
 type Target = ReturnType<typeof validateTarget>;
-type Suggestion = ReturnType<typeof validateSuggestions>[number];
+type Suggestion = ReturnType<typeof validateReview>[number];
 type Optimization = ReturnType<typeof validateOptimization>;
 const steps = ["Your target", "Your CV", "Review content", "Choose format", "Edit & export"];
 const labels = {
@@ -222,8 +221,8 @@ export function Wizard() {
 		analyzeTarget();
 		setStep(1);
 	}
-	async function reviewCV() {
-		if (mode === "text" && !raw.trim()) {
+	async function parseCV() {
+		if (!raw.trim()) {
 			setError("Paste your CV as plain text first.");
 			return;
 		}
@@ -232,32 +231,71 @@ export function Wizard() {
 		const c = new AbortController();
 		workController.current = c;
 		setBusy(true);
-		setReviewProgress(
-			mode === "text" ? "Step 1 of 2: Extracting CV details…" : "Reviewing your CV for missing information…",
-		);
+		setReviewProgress("Extracting your CV into fields…");
 		setError("");
 		try {
-			const t = target || (await targetPromise.current);
-			if (!t) throw Error("Complete target analysis first.");
-			const structured =
-				mode === "text" ? validateCV(await requestJSON(CV_PROMPT, { cvText: raw }, c.signal)) : validateCV(cv);
-			if (c.signal.aborted || id !== runId.current) return;
-			const { name, email, phone, location, ...content } = structured;
-			setReviewProgress("Checking missing information and preparing suggestions…");
-			const changes = validateSuggestions(await requestJSON(REVIEW_PROMPT, { target: t, cv: content }, c.signal));
+			const structured = validateCV(await requestJSON(CV_PROMPT, { cvText: raw }, c.signal));
 			if (c.signal.aborted || id !== runId.current) return;
 			setCV(structured);
-			setSuggestions(changes);
+			setMode("form");
+			setSuggestions([]);
 			setDecisions({});
-			setStep(2);
+			setReviewProgress("Details extracted. Check the populated fields before requesting a professional review.");
 		} catch (e) {
 			if (!c.signal.aborted) setError(e instanceof Error ? e.message : "Could not structure CV");
 		} finally {
 			if (id === runId.current) setBusy(false);
 		}
 	}
+	async function reviewCV() {
+		cancel();
+		const id = runId.current;
+		const c = new AbortController();
+		workController.current = c;
+		setBusy(true);
+		setError("");
+		setReviewProgress("Professional review: preparing up to six prioritized suggestions…");
+		try {
+			const snapshot = validateCV(cv);
+			const { name, email, phone, location, ...content } = snapshot;
+			const changes = validateReview(
+				await requestReview(
+					REVIEW_YAML_PROMPT,
+					{ target: target || { roles, titles, industries, jobDescription: jd }, cv: content },
+					c.signal,
+				),
+				snapshot,
+			);
+			if (c.signal.aborted || id !== runId.current) return;
+			setSuggestions(changes);
+			setDecisions({});
+			setStep(2);
+		} catch (e) {
+			if (!c.signal.aborted)
+				setError(e instanceof Error ? e.message : "Review failed. Your populated CV is preserved.");
+		} finally {
+			if (id === runId.current) setBusy(false);
+		}
+	}
 	function decide(s: Suggestion, accept: boolean) {
-		if (accept) change(s.field as keyof CV, s.proposed);
+		if (accept) {
+			try {
+				const next = applyReviewChange(cv, s);
+				setCV(next);
+				// Accepted additions are known changes, not intervening user edits.
+				if (s.action === "suggest_add")
+					setSuggestions((list) =>
+						list.map((other) =>
+							other.field === "skills" && JSON.stringify(other.before) === JSON.stringify(s.before)
+								? { ...other, before: [...next.skills] }
+								: other,
+						),
+					);
+			} catch (e) {
+				setError(e instanceof Error ? e.message : "Cannot apply stale suggestion");
+				return;
+			}
+		}
 		setDecisions((d) => ({ ...d, [s.id]: accept ? "accepted" : "dismissed" }));
 	}
 	async function optimize() {
@@ -488,9 +526,28 @@ export function Wizard() {
 							For pasted CVs, this text—including any contact details it contains—is sent for extraction. With fields,
 							only career content is sent for recommendations; contact fields remain local.
 						</p>
-						<button type="button" disabled={busy || !target} onClick={reviewCV}>
-							{busy ? reviewProgress : "Next: Structure and review"}
-						</button>
+						<p role="status">{reviewProgress}</p>
+						{mode === "text" ? (
+							<button type="button" disabled={busy || !raw.trim()} onClick={parseCV}>
+								Fill my details
+							</button>
+						) : (
+							<>
+								<button type="button" disabled={busy} onClick={reviewCV}>
+									Review with AI
+								</button>
+								<button
+									type="button"
+									disabled={busy}
+									onClick={() => {
+										setError("");
+										setStep(3);
+									}}
+								>
+									Skip review: Choose format
+								</button>
+							</>
+						)}
 					</section>
 				)}
 				{step === 2 && (
@@ -511,13 +568,7 @@ export function Wizard() {
 									value={Array.isArray(s.proposed) ? s.proposed.join("\n") : s.proposed}
 									long
 									onChange={(v) =>
-										setSuggestions((list) =>
-											list.map((x) =>
-												x.id === s.id
-													? { ...x, proposed: s.field === "skills" ? v.split("\n").filter(Boolean) : v }
-													: x,
-											),
-										)
+										setSuggestions((list) => list.map((x) => (x.id === s.id ? { ...x, proposed: v } : x)))
 									}
 								/>
 								{decisions[s.id] ? (

@@ -82,7 +82,9 @@ const assert = require("node:assert/strict");
 			else if (prompt.startsWith("Optimize")) result = { skillGroups: [[1, 0]], note: "Grouped confirmed skills" };
 			else throw Error("Unexpected request");
 			// Exercise repair in target, extraction, review, and optimization requests.
-			const malformed = `\`\`\`json\n${JSON.stringify(result).replace(/}$/, ",}")}\n\`\`\``;
+			const malformed = prompt.startsWith("Review")
+				? "changes:\n  - field: skills\n    action: suggest_add\n    proposed: SQL\n    reason: Relevant\n    question: Do you know SQL?"
+				: `\`\`\`json\n${JSON.stringify(result).replace(/}$/, ",}")}\n\`\`\``;
 			await route.fulfill({ json: { choices: [{ message: { content: malformed } }] } });
 		});
 		await page.goto(`http://127.0.0.1:${server.address().port}/tools/cv-builder/`);
@@ -91,7 +93,7 @@ const assert = require("node:assert/strict");
 		await page.getByLabel("Full name", { exact: true }).fill("Alex Private");
 		await page.getByLabel("Email", { exact: true }).fill("private@example.com");
 		await page.getByLabel("Skills (one per line)").fill("Python");
-		await page.getByRole("button", { name: "Next: Structure and review" }).click();
+		await page.getByRole("button", { name: "Review with AI", exact: true }).click();
 		await page.getByRole("button", { name: "Accept skills", exact: true }).waitFor();
 		assert(!JSON.stringify(requests[1]).includes("private@example.com"));
 		assert(!JSON.stringify(requests[1]).includes("Alex Private"));
@@ -115,7 +117,12 @@ const assert = require("node:assert/strict");
 		await page.getByRole("button", { name: "Next: Your CV" }).click();
 		await page.getByLabel("How will you provide your CV?").selectOption("text");
 		await page.getByLabel("Paste CV text").fill("Pat Example, pat@example.com. Engineer at Example Co. Python.");
-		await page.getByRole("button", { name: "Next: Structure and review" }).click();
+		const reviewsBefore = requests.filter((r) => r.messages[0].content.startsWith("Review")).length;
+		await page.getByRole("button", { name: "Fill my details" }).click();
+		await page.getByRole("button", { name: "Review with AI", exact: true }).waitFor();
+		assert.equal(await page.getByLabel("Full name", { exact: true }).inputValue(), "Pat Example");
+		assert.equal(requests.filter((r) => r.messages[0].content.startsWith("Review")).length, reviewsBefore);
+		await page.getByRole("button", { name: "Review with AI", exact: true }).click();
 		await page.getByRole("button", { name: "Keep current skills" }).click();
 		await page.getByRole("button", { name: "Content confirmed: Choose format" }).click();
 		await page.getByRole("button", { name: /Multi-page/ }).click();

@@ -2,6 +2,10 @@
 
 ## Guided wizard
 
+CV extraction and professional review are separate actions. In paste mode, **Fill my details** calls only the JSON parser (with local JSON repair), fills the form and autosaves it. The user checks the form before explicitly clicking **Review with AI**. Review uses validated YAML with at most six targeted replacements or individual skill additions. All proposed personal-content changes require approval; stale suggestions are rejected. Users can skip professional review and proceed to format selection. Review failures preserve the populated form. Both stages retain the shared transport's request deadline and cancellation handling.
+
+Run `node apps/trendy-cv/review.test.mjs` for YAML and patch validation coverage. The updated browser smoke test verifies extraction never automatically calls the reviewer.
+
 The default entry point is now `src/Wizard.tsx`: target roles/titles/industries or pasted JD; structured form or plain-text CV; review and approve/dismiss missing-information suggestions; format/theme selection; editable HTML CV and PDF export. Target analysis starts in the background when leaving step one. All AI stages validate structured JSON. Formatting uses confirmed skill indices, so it can regroup/prioritize skills without inventing new ones. CV facts remain editable and extraction must be reviewed.
 
 Wizard drafts use the separate `trendy-cv-wizard` IndexedDB database; existing editor drafts are not deleted. The previous editor remains in source as `LegacyEditor` while its advanced controls are migrated. Run `node apps/trendy-cv/wizard.test.mjs` and `node apps/trendy-cv/smoke.cjs` after building. The browser test covers both form and pasted-CV paths, contact exclusion from form review, approvals, invalid skill references, HTML editing, and PDF download.
