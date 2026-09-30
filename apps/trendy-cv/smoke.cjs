@@ -2,6 +2,7 @@ const { chromium } = require("@playwright/test");
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const assert = require("node:assert/strict");
 (async () => {
 	const root = path.resolve(__dirname, "dist");
 	const server = http.createServer((req, res) => {
@@ -27,51 +28,99 @@ const path = require("node:path");
 		const page = await browser.newPage();
 		const errors = [];
 		page.on("pageerror", (e) => errors.push(e.message));
-		await page.goto(`http://127.0.0.1:${server.address().port}/tools/cv-builder/`);
-		await page.getByLabel("Name", { exact: true }).fill("Alex Example");
-		await page.getByRole("button", { name: "Refresh preview" }).click();
-		await page.getByRole("link", { name: "Download PDF" }).waitFor({ timeout: 60000 });
-		await page.reload();
-		await page.getByLabel("Name", { exact: true }).waitFor();
-		await page.waitForFunction(() =>
-			Array.from(document.querySelectorAll("input")).some((el) => el.value === "Alex Example"),
-		);
-		if (errors.length) throw Error(errors.join("\n"));
-		await page.getByRole("button", { name: "Summary", exact: true }).click();
-		await page.getByLabel("Summary", { exact: true }).fill("I maintain hospital systems.");
-		await page.evaluate(() =>
+		await page.addInitScript(() =>
 			localStorage.setItem(
 				"trendytools.ai.v1",
 				JSON.stringify({
 					provider: "custom",
 					transport: "openai",
-					endpoint: "https://mock.invalid/v1/chat/completions",
-					model: "mock",
+					endpoint: "https://mock.invalid/chat/completions",
 					apiKey: "test",
+					model: "mock",
 				}),
 			),
 		);
-		let body;
-		await page.route("https://mock.invalid/v1/chat/completions", async (route) => {
-			body = route.request().postData();
-			await route.fulfill({
-				json: { choices: [{ message: { content: JSON.stringify({ text: "Maintained hospital systems." }) } }] },
-			});
+		const requests = [];
+		await page.route("https://mock.invalid/chat/completions", async (route) => {
+			const body = route.request().postDataJSON();
+			requests.push(body);
+			const prompt = body.messages[0].content;
+			let result;
+			if (prompt.startsWith("Structure job"))
+				result = {
+					roles: ["Engineer"],
+					titles: ["Software engineer"],
+					industries: ["Technology"],
+					keywords: ["SQL"],
+					inferred: ["SQL"],
+					questions: [],
+				};
+			else if (prompt.startsWith("Extract"))
+				result = {
+					name: "Pat Example",
+					email: "pat@example.com",
+					phone: "",
+					location: "",
+					headline: "Engineer",
+					summary: "Builds software",
+					experience: "Engineer at Example Co",
+					education: "",
+					skills: ["Python"],
+					additional: "",
+				};
+			else if (prompt.startsWith("Review"))
+				result = {
+					suggestions: [
+						{
+							field: "skills",
+							reason: "Clarify database skills",
+							question: "Do you know SQL?",
+							proposed: ["Python", "SQL"],
+						},
+					],
+				};
+			else if (prompt.startsWith("Optimize")) result = { skillGroups: [[1, 0]], note: "Grouped confirmed skills" };
+			else throw Error("Unexpected request");
+			await route.fulfill({ json: { choices: [{ message: { content: JSON.stringify(result) } }] } });
 		});
-		await page.getByRole("button", { name: "Improve selected text with AI" }).click();
-		await page.getByRole("button", { name: "Send selected text and propose edit" }).click();
-		await page.getByRole("button", { name: "Accept this edit" }).waitFor();
-		if (body.includes("Alex Example")) throw Error("Unselected name entered AI request");
-		if ((await page.locator(".editor textarea").inputValue()) !== "I maintain hospital systems.")
-			throw Error("AI applied before review");
-		await page.getByRole("button", { name: "Accept this edit" }).click();
-		if ((await page.locator(".editor textarea").inputValue()) !== "Maintained hospital systems.")
-			throw Error("Accept failed");
-		await page.getByLabel("Template family").selectOption("multipage");
-		await page.getByRole("button", { name: "Refresh preview" }).click();
-		await page.getByRole("link", { name: "Download PDF" }).waitFor({ timeout: 60000 });
-		console.log("PASS: standalone editor, PDF export, IndexedDB restore");
-		console.log("PASS: selected-text AI privacy, review/accept, multi-page PDF generation");
+		await page.goto(`http://127.0.0.1:${server.address().port}/tools/cv-builder/`);
+		await page.getByLabel("Roles you are interested in").fill("Engineer");
+		await page.getByRole("button", { name: "Next: Your CV" }).click();
+		await page.getByLabel("Full name", { exact: true }).fill("Alex Private");
+		await page.getByLabel("Email", { exact: true }).fill("private@example.com");
+		await page.getByLabel("Skills (one per line)").fill("Python");
+		await page.getByRole("button", { name: "Next: Structure and review" }).click();
+		await page.getByRole("button", { name: "Accept skills", exact: true }).waitFor();
+		assert(!JSON.stringify(requests[1]).includes("private@example.com"));
+		assert(!JSON.stringify(requests[1]).includes("Alex Private"));
+		assert(await page.getByRole("button", { name: "Content confirmed: Choose format" }).isDisabled());
+		await page.getByRole("button", { name: "Accept skills", exact: true }).click();
+		await page.getByRole("button", { name: "Content confirmed: Choose format" }).click();
+		await page.getByRole("button", { name: "Create my CV" }).click();
+		await page.getByRole("textbox", { name: "Edit name", exact: true }).waitFor();
+		assert.equal(await page.getByRole("textbox", { name: "Edit skill group 1" }).innerText(), "SQL · Python");
+		await page.getByRole("textbox", { name: "Edit name", exact: true }).fill("Alex Edited");
+		await page.getByRole("heading", { name: "Your CV is ready to edit" }).click();
+		const downloaded = page.waitForEvent("download");
+		await page.getByRole("button", { name: "Export PDF", exact: true }).click();
+		const file = await downloaded;
+		assert.equal(file.suggestedFilename(), "trendy-cv.pdf");
+		assert.deepEqual(errors, []);
+		console.log(
+			"PASS wizard: background target, form review, approval, automatic skill grouping, editable HTML, PDF export",
+		);
+		await page.reload();
+		await page.getByRole("button", { name: "Next: Your CV" }).click();
+		await page.getByLabel("How will you provide your CV?").selectOption("text");
+		await page.getByLabel("Paste CV text").fill("Pat Example, pat@example.com. Engineer at Example Co. Python.");
+		await page.getByRole("button", { name: "Next: Structure and review" }).click();
+		await page.getByRole("button", { name: "Keep current skills" }).click();
+		await page.getByRole("button", { name: "Content confirmed: Choose format" }).click();
+		await page.getByRole("button", { name: /Multi-page/ }).click();
+		await page.getByRole("button", { name: "Create my CV" }).click();
+		// The mock intentionally references an unavailable skill for this CV; validation must block preview.
+		await page.getByRole("alert").filter({ hasText: "unknown or duplicate skill" }).waitFor();
+		console.log("PASS pasted CV extraction, dismissal, invalid optimization blocked");
 	} finally {
 		await browser?.close();
 		server.close();

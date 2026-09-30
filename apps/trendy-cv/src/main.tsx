@@ -6,6 +6,7 @@ import { defaultResumeData } from "@reactive-resume/schema/resume/default";
 import { templateSchema } from "@reactive-resume/schema/templates";
 import { rewrite } from "./ai";
 import "./style.css";
+import { Wizard } from "./Wizard";
 
 const sections = [
 	"experience",
@@ -84,7 +85,7 @@ function download(blob: Blob, name: string) {
 	setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
-function App() {
+export function LegacyEditor() {
 	const [data, setData] = useState(fresh);
 	const [ready, setReady] = useState(false);
 	const [section, setSection] = useState("basics");
@@ -588,4 +589,4 @@ function App() {
 	);
 }
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<App />);
+if (root) createRoot(root).render(<Wizard />);

@@ -21,15 +21,14 @@ export function settings() {
 	if (!endpoint || new URL(endpoint).protocol !== "https:") throw Error("An HTTPS AI endpoint is required.");
 	return { ...s, endpoint };
 }
-export async function rewrite(text: string, instruction: string, signal: AbortSignal): Promise<string> {
+export async function requestJSON(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
 	const s = settings();
 	const messages = [
 		{
 			role: "system",
-			content:
-				'Edit only the supplied CV text. Preserve facts. Never invent employers, qualifications, achievements, dates, numbers, metrics, or skills. If information is missing, preserve the original meaning. Return raw JSON only: {"text":"revised plain text"}. No HTML or Markdown fences.',
+			content: system,
 		},
-		{ role: "user", content: JSON.stringify({ instruction, text }) },
+		{ role: "user", content: JSON.stringify(input) },
 	];
 	let payload: Payload | string;
 	const browser = window as PuterWindow;
@@ -58,7 +57,16 @@ export async function rewrite(text: string, instruction: string, signal: AbortSi
 	const content =
 		typeof payload === "string" ? payload : (payload?.choices?.[0]?.message?.content ?? payload?.message?.content);
 	if (!content) throw Error("AI returned no text");
-	const result = JSON.parse(content);
+	if (content.length > 100000) throw Error("AI response is too large.");
+	return JSON.parse(content);
+}
+
+export async function rewrite(text: string, instruction: string, signal: AbortSignal): Promise<string> {
+	const result = (await requestJSON(
+		'Edit only the supplied CV text. Preserve facts. Never invent employers, qualifications, achievements, dates, numbers, metrics, or skills. Return raw JSON only: {"text":"revised plain text"}. No HTML or Markdown fences.',
+		{ text, instruction },
+		signal,
+	)) as { text: string };
 	if (
 		!result ||
 		Object.keys(result).some((k) => k !== "text") ||

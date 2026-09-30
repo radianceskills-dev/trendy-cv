@@ -1,0 +1,139 @@
+.wizard {
+	display: block;
+	max-width: 1050px;
+	margin: auto;
+	padding: 24px;
+}
+.wizard > section {
+	background: #f8fafb;
+	padding: 28px;
+	border: 1px solid #cbd8df;
+	border-radius: 16px;
+}
+.wizard-steps {
+	display: flex;
+	gap: 14px;
+	list-style: none;
+	margin: 20px auto;
+	padding: 12px 24px;
+	max-width: 1050px;
+	flex-wrap: wrap;
+}
+.wizard-steps li {
+	padding: 8px;
+	color: #637985;
+}
+.wizard-steps .active {
+	background: #276b89;
+	color: white;
+	border-radius: 8px;
+}
+.wizard fieldset {
+	border: 0;
+	padding: 0;
+}
+.wizard button {
+	margin: 8px 8px 8px 0;
+}
+.wizard-error {
+	background: #fee8e8;
+	color: #8e2020;
+	padding: 16px;
+}
+.format-options {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+}
+.format-options .selected {
+	outline: 2px solid #276b89;
+	background: #e2edf5;
+}
+.suggestion pre {
+	white-space: pre-wrap;
+}
+.cv-preview {
+	background: white;
+	color: #222;
+	padding: 45px;
+	margin: 24px auto;
+	max-width: 820px;
+	box-shadow: 0 6px 30px #172a3320;
+}
+.cv-preview h1 {
+	color: var(--cv-accent);
+}
+.cv-preview h2 {
+	font-size: 18px;
+	color: var(--cv-accent);
+	margin: 20px 0 10px;
+}
+.cv-preview [contenteditable] {
+	white-space: pre-wrap;
+	min-height: 1.4em;
+	outline: 1px dashed transparent;
+}
+.cv-preview [contenteditable]:hover,
+.cv-preview [contenteditable]:focus {
+	outline-color: #9eb4c3;
+	background: #edf5fa;
+}
+.cv-contact {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+.advanced .cv-columns {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: 30px;
+}
+.page-start {
+	border-top: 2px dashed #abc3d0;
+	margin-top: 30px;
+	padding-top: 25px;
+}
+.wizard details {
+	padding: 14px;
+	border: 1px solid #cedce4;
+	margin: 14px 0;
+}
+.wizard summary {
+	cursor: pointer;
+	font-weight: 600;
+}
+@media (max-width: 650px) {
+	.format-options {
+		grid-template-columns: 1fr;
+	}
+	.wizard {
+		padding: 10px;
+	}
+	.wizard > section {
+		padding: 18px;
+	}
+	.cv-preview {
+		padding: 20px;
+	}
+	.advanced .cv-columns {
+		display: block;
+	}
+	.wizard-steps {
+		gap: 3px;
+		font-size: 12px;
+	}
+}
+@media print {
+	header,
+	.wizard-steps,
+	.wizard > section > button,
+	.back {
+		display: none;
+	}
+	.cv-preview {
+		box-shadow: none;
+	}
+	.page-start {
+		break-before: page;
+	}
+}

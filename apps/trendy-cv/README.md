@@ -1,5 +1,13 @@
 # Trendy CV
 
+## Guided wizard
+
+The default entry point is now `src/Wizard.tsx`: target roles/titles/industries or pasted JD; structured form or plain-text CV; review and approve/dismiss missing-information suggestions; format/theme selection; editable HTML CV and PDF export. Target analysis starts in the background when leaving step one. All AI stages validate structured JSON. Formatting uses confirmed skill indices, so it can regroup/prioritize skills without inventing new ones. CV facts remain editable and extraction must be reviewed.
+
+Wizard drafts use the separate `trendy-cv-wizard` IndexedDB database; existing editor drafts are not deleted. The previous editor remains in source as `LegacyEditor` while its advanced controls are migrated. Run `node apps/trendy-cv/wizard.test.mjs` and `node apps/trendy-cv/smoke.cjs` after building. The browser test covers both form and pasted-CV paths, contact exclusion from form review, approvals, invalid skill references, HTML editing, and PDF download.
+
+The HTML editor and PDF exporter share content but currently use separate layout renderers; pixel-identical pagination is not guaranteed. The wizard exposes three format presets and six palettes; the old editor's 15-design selector is not currently exposed in the wizard.
+
 Static, local-first CV editor built on Reactive Resume's MIT-licensed schema and PDF packages. Original source and licenses are retained in this repository.
 
 ## Run
