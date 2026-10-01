@@ -137,3 +137,134 @@
 		break-before: page;
 	}
 }
+.cv-preview {
+	border-radius: 4px;
+	padding: 48px 52px;
+	border-top: 6px solid var(--cv-accent);
+	font-family: "Segoe UI", Arial, sans-serif;
+	line-height: 1.65;
+	box-shadow: 0 16px 50px #172a331a;
+}
+.cv-preview > h1 {
+	font-size: 38px;
+	font-weight: 750;
+	letter-spacing: -0.045em;
+	line-height: 1.15;
+	margin: 0 0 10px;
+}
+.cv-preview > h2 {
+	font-size: 17px;
+	font-weight: 500;
+	margin: 0 0 16px;
+	color: #4c6270;
+}
+.cv-preview .cv-contact {
+	gap: 8px 22px;
+	padding-bottom: 22px;
+	margin-bottom: 24px;
+	border-bottom: 1px solid #d9e3e9;
+	font-size: 12px;
+	color: #526b7a;
+}
+.cv-contact p {
+	margin: 0;
+}
+.cv-preview .cv-columns h2 {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.13em;
+	font-weight: 750;
+	margin: 26px 0 12px;
+	border-bottom: 1px solid #dce5eb;
+	padding-bottom: 8px;
+}
+.cv-preview .cv-columns p {
+	font-size: 14px;
+	margin: 0 0 12px;
+}
+.cv-preview.advanced.has-skills .cv-columns {
+	grid-template-columns: minmax(0, 2fr) minmax(150px, 1fr);
+	gap: 32px;
+}
+.cv-preview.advanced:not(.has-skills) .cv-columns {
+	display: block;
+}
+.cv-preview.advanced .cv-skills {
+	background: color-mix(in srgb, var(--cv-accent) 8%, white);
+	padding: 4px 18px 18px;
+	border-radius: 10px;
+	align-self: start;
+}
+.cv-preview .cv-skills p {
+	padding: 8px 0;
+	border-bottom: 1px solid #c6d5de80;
+	font-size: 13px;
+}
+.cv-preview.multipage {
+	border-top: 0;
+	border-left: 4px solid var(--cv-accent);
+}
+.cv-preview.multipage > h1 {
+	font-size: 34px;
+}
+.cv-preview [contenteditable]:focus {
+	outline: 2px solid var(--cv-accent);
+	outline-offset: 4px;
+	border-radius: 2px;
+}
+.format-options button {
+	position: relative;
+	text-align: left;
+	padding: 24px 18px;
+	background: linear-gradient(155deg, #fff, #eaf1f5);
+	border-radius: 12px;
+	min-height: 160px;
+}
+.format-options button strong {
+	display: block;
+	font-size: 19px;
+	letter-spacing: -0.025em;
+}
+.format-options button:before {
+	content: "";
+	display: block;
+	width: 40px;
+	height: 5px;
+	background: #276b89;
+	margin-bottom: 20px;
+	border-radius: 2px;
+}
+.format-options button:nth-child(2):before {
+	width: 22px;
+	height: 35px;
+	float: right;
+	margin-left: 12px;
+	background: #c1dbe7;
+}
+.format-options button:nth-child(3):before {
+	box-shadow:
+		0 8px #b6cbd5,
+		0 16px #d4e1e7;
+	margin-bottom: 32px;
+}
+.format-options button p {
+	font-size: 13px;
+	color: #526b7a;
+}
+@media (max-width: 650px) {
+	.cv-preview {
+		padding: 26px 22px;
+	}
+	.cv-preview > h1 {
+		font-size: 29px;
+	}
+	.cv-preview.advanced.has-skills .cv-columns {
+		display: block;
+	}
+	.cv-preview .cv-contact {
+		gap: 6px 12px;
+	}
+	.cv-preview .cv-skills {
+		margin-top: 20px;
+	}
+}

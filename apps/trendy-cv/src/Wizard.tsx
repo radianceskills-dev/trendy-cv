@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { defaultResumeData } from "@reactive-resume/schema/resume/default";
 import { requestJSON, requestReview } from "./ai";
 import { applyReviewChange, REVIEW_YAML_PROMPT, validateReview } from "./review.mjs";
+import { contentPages, hasContent } from "./template-layout.mjs";
 import {
 	approvedSkills,
 	CV_FIELDS,
@@ -338,13 +339,20 @@ export function Wizard() {
 			const html = (v: string) => escapeHTML(v).replace(/\n/g, "<br>");
 			data.summary.content = html(cv.summary);
 			data.summary.title = "Profile";
+			data.summary.hidden = !hasContent(cv.summary);
 			data.metadata.template = format === "advanced" ? "azurill" : "onyx";
 			data.metadata.page.format = paper as "a4" | "letter";
 			data.metadata.typography.body.fontFamily = "Helvetica";
 			data.metadata.typography.heading.fontFamily = "Helvetica";
 			data.metadata.design.colors.primary = THEMES[theme];
+			data.metadata.typography.body.fontSize = 10;
+			data.metadata.typography.body.lineHeight = 1.5;
+			data.metadata.typography.heading.fontSize = 13;
+			data.metadata.page.gapY = 8;
+			data.metadata.page.marginX = 16;
+			data.metadata.page.marginY = 16;
 			data.sections.experience.title = "Experience";
-			data.sections.experience.items = cv.experience
+			data.sections.experience.items = hasContent(cv.experience)
 				? [
 						{
 							id: "experience",
@@ -360,7 +368,7 @@ export function Wizard() {
 					]
 				: [];
 			data.sections.education.title = "Education";
-			data.sections.education.items = cv.education
+			data.sections.education.items = hasContent(cv.education)
 				? [
 						{
 							id: "education",
@@ -390,7 +398,7 @@ export function Wizard() {
 					iconColor: "",
 				}));
 			data.sections.projects.title = "Additional information";
-			data.sections.projects.items = cv.additional
+			data.sections.projects.items = hasContent(cv.additional)
 				? [
 						{
 							id: "additional",
@@ -415,6 +423,8 @@ export function Wizard() {
 								sidebar: format === "advanced" ? ["skills"] : [],
 							},
 						];
+			data.metadata.layout.pages = contentPages(cv, shownSkills, format);
+			for (const section of Object.values(data.sections)) section.hidden = section.items.length === 0;
 			const { createResumePdfBlob } = await import("@reactive-resume/pdf/browser");
 			const blob = await createResumePdfBlob({ data });
 			const url = URL.createObjectURL(blob);
@@ -664,42 +674,54 @@ export function Wizard() {
 						<button type="button" disabled={busy} onClick={exportPDF}>
 							{busy ? "Exporting…" : "Export PDF"}
 						</button>
-						<div className={`cv-preview ${format}`} style={{ "--cv-accent": THEMES[theme] } as React.CSSProperties}>
+						<p className="muted">Empty sections are hidden. Use Back to add information in the form.</p>
+						<div
+							className={`cv-preview ${format} ${shownSkills.some(hasContent) ? "has-skills" : ""}`}
+							style={{ "--cv-accent": THEMES[theme] } as React.CSSProperties}
+						>
 							<Editable tag="h1" label="Edit name" value={cv.name} onChange={(v) => change("name", v)} />
-							<Editable
-								tag="h2"
-								label="Edit professional title"
-								value={cv.headline}
-								onChange={(v) => change("headline", v)}
-							/>
+							{hasContent(cv.headline) && (
+								<Editable
+									tag="h2"
+									label="Edit professional title"
+									value={cv.headline}
+									onChange={(v) => change("headline", v)}
+								/>
+							)}
 							<div className="cv-contact">
-								{["email", "phone", "location"].map((k) => (
-									<Editable key={k} label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
-								))}
+								{["email", "phone", "location"]
+									.filter((k) => hasContent(cv[k]))
+									.map((k) => (
+										<Editable key={k} label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
+									))}
 							</div>
 							<div className="cv-columns">
 								<div>
-									{["summary", "experience", "education", "additional"].map((k) => (
-										<section key={k} className={format === "multipage" && k === "education" ? "page-start" : ""}>
-											<h2>{k === "additional" ? "Additional information" : k[0].toUpperCase() + k.slice(1)}</h2>
-											<Editable label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
-										</section>
-									))}
+									{["summary", "experience", "education", "additional"]
+										.filter((k) => hasContent(cv[k]))
+										.map((k) => (
+											<section key={k} className={format === "multipage" && k === "education" ? "page-start" : ""}>
+												<h2>{k === "additional" ? "Additional information" : k[0].toUpperCase() + k.slice(1)}</h2>
+												<Editable label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
+											</section>
+										))}
 								</div>
-								<section>
-									<h2>Skills</h2>
-									{shownSkills.map((s, i) => (
-										<Editable
-											key={i}
-											label={`Edit skill group ${i + 1}`}
-											value={s}
-											onChange={(v) => setShownSkills((old) => old.map((x, j) => (j === i ? v : x)))}
-										/>
-									))}
-									<button type="button" onClick={() => setShownSkills((s) => [...s, ""])}>
-										+ Skill group
-									</button>
-								</section>
+								{shownSkills.some(hasContent) && (
+									<section className="cv-skills">
+										<h2>Skills</h2>
+										{shownSkills.map(
+											(s, i) =>
+												hasContent(s) && (
+													<Editable
+														key={i}
+														label={`Edit skill group ${i + 1}`}
+														value={s}
+														onChange={(v) => setShownSkills((old) => old.map((x, j) => (j === i ? v : x)))}
+													/>
+												),
+										)}
+									</section>
+								)}
 							</div>
 						</div>
 						<p className="muted">

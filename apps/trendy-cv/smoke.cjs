@@ -102,6 +102,13 @@ const assert = require("node:assert/strict");
 		await page.getByRole("button", { name: "Content confirmed: Choose format" }).click();
 		await page.getByRole("button", { name: "Create my CV" }).click();
 		await page.getByRole("textbox", { name: "Edit name", exact: true }).waitFor();
+		for (const heading of ["Summary", "Experience", "Education", "Additional information"]) {
+			assert.equal(await page.locator(".cv-preview").getByRole("heading", { name: heading, exact: true }).count(), 0);
+		}
+		assert.equal(
+			await page.locator(".cv-preview").getByRole("textbox", { name: "Edit phone", exact: true }).count(),
+			0,
+		);
 		assert.equal(await page.getByRole("textbox", { name: "Edit skill group 1" }).innerText(), "SQL · Python");
 		await page.getByRole("textbox", { name: "Edit name", exact: true }).fill("Alex Edited");
 		await page.getByRole("heading", { name: "Your CV is ready to edit" }).click();

@@ -1,5 +1,9 @@
 # Trendy CV
 
+## Content-aware templates
+
+HTML preview omits whitespace-only/empty career sections, contact fields, professional title, and skill groups. PDF layout applies the same presence checks, drops empty continuation pages, and expands the main column when no skills sidebar is needed. Edit hidden fields through the form using Back. Simple uses a clean accent rule, advanced uses a tinted skills sidebar, and multi-page uses an editorial accent edge; all keep the six selectable palettes. PDF typography uses Helvetica with 16 mm margins, increased section spacing, and a 10 pt body.
+
 ## Guided wizard
 
 CV extraction and professional review are separate actions. In paste mode, **Fill my details** calls only the JSON parser (with local JSON repair), fills the form and autosaves it. The user checks the form before explicitly clicking **Review with AI**. Review uses validated YAML with at most six targeted replacements or individual skill additions. All proposed personal-content changes require approval; stale suggestions are rejected. Users can skip professional review and proceed to format selection. Review failures preserve the populated form. Both stages retain the shared transport's request deadline and cancellation handling.
