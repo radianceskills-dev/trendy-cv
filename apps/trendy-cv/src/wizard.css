@@ -1,8 +1,57 @@
 .wizard {
 	display: block;
-	max-width: 1050px;
+	max-width: 1440px;
 	margin: auto;
 	padding: 24px;
+}
+.template-controls {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px;
+}
+.template-controls label {
+	flex: 1;
+	min-width: 160px;
+}
+.template-workspace {
+	display: grid;
+	grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+	gap: 24px;
+	align-items: start;
+}
+.template-editor {
+	min-width: 0;
+}
+.source-text {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	max-height: 240px;
+	overflow: auto;
+}
+.pdf-pages {
+	min-width: 0;
+	background: #dfe7ec;
+	padding: 16px;
+	border-radius: 12px;
+}
+.pdf-page {
+	margin-bottom: 20px;
+}
+.pdf-page canvas {
+	display: block;
+	width: 100%;
+	height: auto;
+	background: white;
+	box-shadow: 0 3px 15px #172a3320;
+}
+.pdf-page details {
+	background: #f8fafb;
+	overflow-wrap: anywhere;
+}
+@media (max-width: 850px) {
+	.template-workspace {
+		grid-template-columns: 1fr;
+	}
 }
 .wizard > section {
 	background: #f8fafb;

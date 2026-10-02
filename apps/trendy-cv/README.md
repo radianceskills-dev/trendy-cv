@@ -1,51 +1,52 @@
 # Trendy CV
 
-## Content-aware templates
+## Section model and target-planning preview
 
-HTML preview omits whitespace-only/empty career sections, contact fields, professional title, and skill groups. PDF layout applies the same presence checks, drops empty continuation pages, and expands the main column when no skills sidebar is needed. Edit hidden fields through the form using Back. Simple uses a clean accent rule, advanced uses a tinted skills sidebar, and multi-page uses an editorial accent edge; all keep the six selectable palettes. PDF typography uses Helvetica with 16 mm margins, increased section spacing, and a 10 pt body.
+The default entry now renders `TargetPlanner.tsx` (Phases A/B). Required desired jobs and industries lead to a reviewed AI keyword/section plan. Titles/JD are optional. Plan validation allows 15 standard section types, rejects custom/duplicate types, constrains initial titles, labels inferred keywords and checks JD evidence quotes. Acceptance persists a fixed plan and initializes empty typed sections. Section editing and downstream export are the next phase; the new flow explicitly ends after plan acceptance.
 
-## Guided wizard
+`section-model.mjs` owns field descriptors, entry validation, date precision and meaningful-content checks. `target-plan.mjs` owns normalized targets, strict plan contracts, version-2 draft validation and nondestructive legacy import. `plan-storage.ts` serializes IndexedDB writes in `trendy-cv-planner`. Existing `trendy-cv-wizard` records are retained; original content and structured overrides are copied into a migration backup, not automatically assigned into the new plan. Unsupported/corrupt saved drafts pause autosave.
 
-CV extraction and professional review are separate actions. In paste mode, **Fill my details** calls only the JSON parser (with local JSON repair), fills the form and autosaves it. The user checks the form before explicitly clicking **Review with AI**. Review uses validated YAML with at most six targeted replacements or individual skill additions. All proposed personal-content changes require approval; stale suggestions are rejected. Users can skip professional review and proceed to format selection. Review failures preserve the populated form. Both stages retain the shared transport's request deadline and cancellation handling.
+Run `node --test apps/trendy-cv/target-plan.test.mjs` and, after building, `node apps/trendy-cv/planning-smoke.cjs`. The previous wizard remains available at `?legacy` for regression checks with `smoke.cjs`; it is not the new fixed-section workflow. Do not deploy this intermediate planner as a complete CV-building replacement without completing the later phases.
 
-Run `node apps/trendy-cv/review.test.mjs` for YAML and patch validation coverage. The updated browser smoke test verifies extraction never automatically calls the reviewer.
+Static browser-first CV wizard built on Reactive Resume's retained MIT-licensed schema and PDF packages. Mounted at `/tools/cv-builder/`.
 
-The default entry point is now `src/Wizard.tsx`: target roles/titles/industries or pasted JD; structured form or plain-text CV; review and approve/dismiss missing-information suggestions; format/theme selection; editable HTML CV and PDF export. Target analysis starts in the background when leaving step one. All AI stages validate structured JSON. Formatting uses confirmed skill indices, so it can regroup/prioritize skills without inventing new ones. CV facts remain editable and extraction must be reviewed.
+## Content and templates
 
-Wizard drafts use the separate `trendy-cv-wizard` IndexedDB database; existing editor drafts are not deleted. The previous editor remains in source as `LegacyEditor` while its advanced controls are migrated. Run `node apps/trendy-cv/wizard.test.mjs` and `node apps/trendy-cv/smoke.cjs` after building. The browser test covers both form and pasted-CV paths, contact exclusion from form review, approvals, invalid skill references, HTML editing, and PDF download.
+Target analysis, extraction and reviewed professional suggestions remain separate. Extraction uses JSON with local repair; professional review uses validated YAML and explicit acceptance. Contact fields are excluded from form-based review. Credentials remain in browser-local shared AI settings.
 
-The HTML editor and PDF exporter share content but currently use separate layout renderers; pixel-identical pagination is not guaranteed. The wizard exposes three format presets and six palettes; the old editor's 15-design selector is not currently exposed in the wizard.
+After curation, users can create a CV without another AI call or optionally group confirmed skills with AI. Skill-group limits are independent from visual templates.
 
-Static, local-first CV editor built on Reactive Resume's MIT-licensed schema and PDF packages. Original source and licenses are retained in this repository.
+`src/resume-adapter.mjs` maps curated content and optional structured experience/education into Reactive Resume data. The initial comparison set exposes Onyx, Azurill and Bronzor, six palettes and A4/Letter. Templates flow onto additional PDF pages; the old forced two-page split is removed.
 
-## Run
+`TemplateBuilder.tsx` generates a debounced PDF in the browser. `PdfPages.tsx` renders that exact blob using lazy-loaded PDF.js, with accessible extracted page text. Download uses the same blob; edits disable stale downloads until regeneration finishes. Old render results are discarded and object URLs are released.
 
-Use Node 24 and pnpm 12.6.0 from the repository root:
+Experience/education entries support separate organization, role/qualification, dates and description bullets. Original curated text remains available. Old drafts render their original text without guessing structure. If source text changes, saved structured overrides become inactive until checked and explicitly reactivated. Missing organization fields use generic section labels required by the upstream schema.
+
+Wizard IndexedDB (`trendy-cv-wizard`) persists original content, structured entries, template, palette and paper. The older `LegacyEditor` and its separate database remain available in source, not in the wizard UI.
+
+## Run and verify
+
+Use Node 24 and pnpm 12.6.0 from repository root:
 
 ```
-pnpm install --filter trendy-cv...
+pnpm install --filter trendy-cv... --frozen-lockfile
 pnpm --filter trendy-cv dev
 pnpm --filter trendy-cv build
+node --test apps/trendy-cv/ai-json.test.mjs apps/trendy-cv/review.test.mjs apps/trendy-cv/wizard.test.mjs apps/trendy-cv/resume-adapter.test.mjs apps/trendy-cv/template-layout.test.mjs
 node apps/trendy-cv/smoke.cjs
 ```
 
-Set `CHROME_BIN` for the browser test. Build output: `apps/trendy-cv/dist`. Public base: `/tools/cv-builder/`.
+Set `CHROME_BIN` for the browser test. Output: `apps/trendy-cv/dist`.
 
-## Current functionality
+Browser coverage includes curation, empty sections, PDF text after edits, identical downloaded blob bytes, three templates with long content across pages, mobile width, structured draft restoration and A4/Letter selection. These checks do not replace visual inspection of page breaks.
 
-- Local IndexedDB draft and JSON backup/import using the full Reactive Resume schema.
-- Simple single-column (Onyx), advanced sidebar (Azurill), and two-page professional (Onyx) presets.
-- Six independent color themes, A4/Letter paper, explicit section-to-page assignment.
-- Browser PDF preview and download from the same PDF blob; refresh after edits.
-- Selected-summary/description AI rewrites through shared `trendytools.ai.v1` settings. Explicit send and accept; other CV fields are excluded from the request.
-- No account, server API, or database service required.
+For comparison artifacts, set `CV_ARTIFACT_DIR` to an existing directory before running `smoke.cjs`. It writes each template PDF and per-page PNG screenshots there. Run `node apps/trendy-cv/audit-pdfs.mjs <artifact-directory>` with Node 24 to check nonblank pages, all 45 fixture achievements appearing exactly once, and text positions within page boundaries. The long-content fixture produces two Onyx pages and three pages each for Azurill and Bronzor. This is a stress fixture, not a representative visual design sample.
 
-## Remaining work before release
+## Remaining evaluation
 
-- Broader template gallery, font/density controls, section ordering, page removal, custom sections and photo editing.
-- JSON Resume interchange (current JSON backup is Reactive Resume-shaped).
-- Automatic overflow management and PDF page-count/text-extraction tests.
-- Mobile preview testing, stronger import sanitization, and complete AI transport tests.
-- Owned GitHub remote and Trendy Tools deployment registration.
-
-This app is not yet registered as a live dashboard tool.
+- Compare rendered designs with user-selected examples before expanding the template gallery.
+- Test required non-Latin scripts/fonts and diverse real CV layouts; current baseline uses Helvetica.
+- Structured entry conversion is manual; automatic extraction into these entries is not implemented.
+- Editing occurs in fields beside the PDF, not directly on PDF text.
+- Typst/imprecv comparison is still a separate experiment; no Typst integration is included.
+- Full-site CI/Netlify validation is required before publishing this source change.

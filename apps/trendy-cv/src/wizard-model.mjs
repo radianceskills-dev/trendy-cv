@@ -23,16 +23,21 @@ export const CV_FIELDS = [
 	"additional",
 ];
 export const FORMATS = {
-	simple: { label: "Simple", description: "Clean single column. Up to 8 skill groups.", skills: 8, columns: false },
+	simple: {
+		label: "Simple",
+		description: "Concise skills: up to 8 groups. Choose your visual template next.",
+		skills: 8,
+		columns: false,
+	},
 	advanced: {
 		label: "Advanced",
-		description: "Sidebar for skills and contact details. Up to 12 skill groups.",
+		description: "Balanced skills: up to 12 groups. Choose your visual template next.",
 		skills: 12,
 		columns: true,
 	},
 	multipage: {
 		label: "Multi-page",
-		description: "Experience first; education and additional details on page two. Up to 20 skill groups.",
+		description: "Extended skills: up to 20 groups. Pages flow automatically in the PDF.",
 		skills: 20,
 		columns: false,
 	},

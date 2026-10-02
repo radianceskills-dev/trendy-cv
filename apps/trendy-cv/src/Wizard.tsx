@@ -1,14 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { defaultResumeData } from "@reactive-resume/schema/resume/default";
 import { requestJSON, requestReview } from "./ai";
 import { applyReviewChange, REVIEW_YAML_PROMPT, validateReview } from "./review.mjs";
-import { contentPages, hasContent } from "./template-layout.mjs";
 import {
 	approvedSkills,
 	CV_FIELDS,
 	CV_PROMPT,
 	emptyCV,
-	escapeHTML,
 	FORMATS,
 	OPTIMIZE_PROMPT,
 	TARGET_PROMPT,
@@ -18,6 +15,9 @@ import {
 	validateTarget,
 } from "./wizard-model.mjs";
 import "./wizard.css";
+import type { Entries } from "./TemplateBuilder";
+import { TEMPLATES, validateEntries } from "./resume-adapter.mjs";
+import TemplateBuilder from "./TemplateBuilder";
 
 type CV = ReturnType<typeof emptyCV>;
 type Target = ReturnType<typeof validateTarget>;
@@ -78,34 +78,6 @@ function Field({
 		</label>
 	);
 }
-function Editable({
-	label,
-	value,
-	onChange,
-	tag = "p",
-}: {
-	label: string;
-	value: string;
-	onChange: (v: string) => void;
-	tag?: "p" | "h1" | "h2";
-}) {
-	return React.createElement(
-		tag,
-		{
-			contentEditable: true,
-			suppressContentEditableWarning: true,
-			role: "textbox",
-			"aria-label": label,
-			"aria-multiline": true,
-			onBlur: (e: React.FocusEvent<HTMLElement>) => onChange((e.currentTarget.innerText || "").slice(0, 12000)),
-			onPaste: (e: React.ClipboardEvent<HTMLElement>) => {
-				e.preventDefault();
-				document.execCommand("insertText", false, e.clipboardData.getData("text/plain"));
-			},
-		},
-		value,
-	);
-}
 export function Wizard() {
 	const [step, setStep] = useState(0);
 	const [roles, setRoles] = useState("");
@@ -122,6 +94,8 @@ export function Wizard() {
 	const [format, setFormat] = useState("simple");
 	const [theme, setTheme] = useState("Arctic");
 	const [paper, setPaper] = useState("a4");
+	const [template, setTemplate] = useState("onyx");
+	const [entries, setEntries] = useState<Entries>({});
 	const [optimization, setOptimization] = useState<Optimization | null>(null);
 	const [shownSkills, setShownSkills] = useState<string[]>([]);
 	const [busy, setBusy] = useState(false);
@@ -150,6 +124,9 @@ export function Wizard() {
 					shownSkills?: string[];
 					format?: string;
 					theme?: string;
+					paper?: string;
+					template?: string;
+					entries?: Entries;
 				};
 				setCV(validateCV(d.cv));
 				setRoles(d.roles || "");
@@ -161,6 +138,9 @@ export function Wizard() {
 				if (Array.isArray(d.shownSkills)) setShownSkills(d.shownSkills.filter((s) => typeof s === "string"));
 				if (d.format && Object.hasOwn(FORMATS, d.format)) setFormat(d.format);
 				if (d.theme && Object.hasOwn(THEMES, d.theme)) setTheme(d.theme);
+				if (d.paper === "a4" || d.paper === "letter") setPaper(d.paper);
+				if (d.template && Object.hasOwn(TEMPLATES, d.template)) setTemplate(d.template);
+				setEntries(validateEntries(d.entries));
 			})
 			.catch(() => {
 				setStorageSafe(false);
@@ -175,12 +155,28 @@ export function Wizard() {
 	useEffect(() => {
 		if (!ready || !storageSafe) return;
 		const timer = setTimeout(() => {
-			saveDraft({ cv, roles, titles, industries, jd, raw, mode, shownSkills, format, theme })
+			saveDraft({ cv, roles, titles, industries, jd, raw, mode, shownSkills, format, theme, template, paper, entries })
 				.then(() => setSaved("Draft saved in this browser"))
 				.catch(() => setSaved("Autosave failed. Keep a copy of your text."));
 		}, 500);
 		return () => clearTimeout(timer);
-	}, [ready, storageSafe, cv, roles, titles, industries, jd, raw, mode, shownSkills, format, theme]);
+	}, [
+		ready,
+		storageSafe,
+		cv,
+		roles,
+		titles,
+		industries,
+		jd,
+		raw,
+		mode,
+		shownSkills,
+		format,
+		theme,
+		template,
+		paper,
+		entries,
+	]);
 	const change = (key: keyof CV, value: string | string[]) => setCV((old) => ({ ...old, [key]: value }));
 	function cancel() {
 		runId.current++;
@@ -320,123 +316,6 @@ export function Wizard() {
 			if (!c.signal.aborted) setError(e instanceof Error ? e.message : "Could not optimize format");
 		} finally {
 			if (id === runId.current) setBusy(false);
-		}
-	}
-	async function exportPDF() {
-		setBusy(true);
-		setError("");
-		try {
-			const data = structuredClone(defaultResumeData);
-			data.basics = {
-				...data.basics,
-				name: cv.name,
-				email: cv.email,
-				phone: cv.phone,
-				location: cv.location,
-				headline: cv.headline,
-			};
-			data.picture.hidden = true;
-			const html = (v: string) => escapeHTML(v).replace(/\n/g, "<br>");
-			data.summary.content = html(cv.summary);
-			data.summary.title = "Profile";
-			data.summary.hidden = !hasContent(cv.summary);
-			data.metadata.template = format === "advanced" ? "azurill" : "onyx";
-			data.metadata.page.format = paper as "a4" | "letter";
-			data.metadata.typography.body.fontFamily = "Helvetica";
-			data.metadata.typography.heading.fontFamily = "Helvetica";
-			data.metadata.design.colors.primary = THEMES[theme];
-			data.metadata.typography.body.fontSize = 10;
-			data.metadata.typography.body.lineHeight = 1.5;
-			data.metadata.typography.heading.fontSize = 13;
-			data.metadata.page.gapY = 8;
-			data.metadata.page.marginX = 16;
-			data.metadata.page.marginY = 16;
-			data.sections.experience.title = "Experience";
-			data.sections.experience.items = hasContent(cv.experience)
-				? [
-						{
-							id: "experience",
-							hidden: false,
-							company: "Experience",
-							position: "",
-							location: "",
-							period: "",
-							description: html(cv.experience),
-							website: { url: "", label: "", inlineLink: false },
-							roles: [],
-						},
-					]
-				: [];
-			data.sections.education.title = "Education";
-			data.sections.education.items = hasContent(cv.education)
-				? [
-						{
-							id: "education",
-							hidden: false,
-							school: "Education",
-							degree: "",
-							area: "",
-							grade: "",
-							location: "",
-							period: "",
-							description: html(cv.education),
-							website: { url: "", label: "", inlineLink: false },
-						},
-					]
-				: [];
-			data.sections.skills.title = "Skills";
-			data.sections.skills.items = shownSkills
-				.filter((s) => s.trim())
-				.map((s, i) => ({
-					id: `skill-${i}`,
-					hidden: false,
-					name: s,
-					proficiency: "",
-					level: 0,
-					keywords: [],
-					icon: "",
-					iconColor: "",
-				}));
-			data.sections.projects.title = "Additional information";
-			data.sections.projects.items = hasContent(cv.additional)
-				? [
-						{
-							id: "additional",
-							hidden: false,
-							name: "Additional information",
-							period: "",
-							description: html(cv.additional),
-							website: { url: "", label: "", inlineLink: false },
-						},
-					]
-				: [];
-			data.metadata.layout.pages =
-				format === "multipage"
-					? [
-							{ fullWidth: true, main: ["summary", "experience"], sidebar: [] },
-							{ fullWidth: true, main: ["education", "skills", "projects"], sidebar: [] },
-						]
-					: [
-							{
-								fullWidth: format !== "advanced",
-								main: ["summary", "experience", "education", "projects", ...(format === "advanced" ? [] : ["skills"])],
-								sidebar: format === "advanced" ? ["skills"] : [],
-							},
-						];
-			data.metadata.layout.pages = contentPages(cv, shownSkills, format);
-			for (const section of Object.values(data.sections)) section.hidden = section.items.length === 0;
-			const { createResumePdfBlob } = await import("@reactive-resume/pdf/browser");
-			const blob = await createResumePdfBlob({ data });
-			const url = URL.createObjectURL(blob);
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = "trendy-cv.pdf";
-			a.click();
-			setTimeout(() => URL.revokeObjectURL(url), 30000);
-		} catch (e) {
-			setError(e instanceof Error ? e.message : "PDF export failed");
-		} finally {
-			setBusy(false);
 		}
 	}
 	const detailFields = () =>
@@ -619,7 +498,7 @@ export function Wizard() {
 				)}
 				{step === 3 && (
 					<section>
-						<h1>Choose your format</h1>
+						<h1>Prepare your presentation</h1>
 						<div className="format-options">
 							{Object.entries(FORMATS).map(([k, f]) => (
 								<button
@@ -650,20 +529,42 @@ export function Wizard() {
 							</select>
 						</label>
 						<p>
-							AI will group and prioritize confirmed skills to fit this format automatically. Your complete skills list
-							remains in the draft. Other CV facts are preserved.
+							Create your CV with all confirmed skills, or optionally ask AI to group them using the selected limit.
+							Your complete skills list remains in the draft. Choose and compare visual templates in the next step.
 						</p>
 						<button type="button" disabled={busy} onClick={optimize}>
-							{busy ? "Optimizing layout…" : "Create my CV"}
+							{busy ? "Grouping skills…" : "Group skills with AI & create CV"}
+						</button>
+						<button
+							type="button"
+							disabled={busy}
+							onClick={() => {
+								setError("");
+								setShownSkills(cv.skills);
+								setOptimization(null);
+								setStep(4);
+							}}
+						>
+							Create my CV
 						</button>
 					</section>
 				)}
 				{step === 4 && (
 					<section>
-						<h1>Your CV is ready to edit</h1>
-						<p>
-							Click any text in the HTML preview to edit. Click outside the field to save the change before exporting.
-						</p>
+						<TemplateBuilder
+							cv={cv}
+							onChange={change}
+							skills={shownSkills}
+							onSkills={setShownSkills}
+							entries={entries}
+							onEntries={setEntries}
+							template={template}
+							onTemplate={setTemplate}
+							theme={theme}
+							onTheme={setTheme}
+							paper={paper}
+							onPaper={setPaper}
+						/>
 						<p>{optimization?.note}</p>
 						{!!optimization?.omitted.length && (
 							<details>
@@ -671,63 +572,6 @@ export function Wizard() {
 								<p>{optimization.omitted.join(", ")}</p>
 							</details>
 						)}
-						<button type="button" disabled={busy} onClick={exportPDF}>
-							{busy ? "Exporting…" : "Export PDF"}
-						</button>
-						<p className="muted">Empty sections are hidden. Use Back to add information in the form.</p>
-						<div
-							className={`cv-preview ${format} ${shownSkills.some(hasContent) ? "has-skills" : ""}`}
-							style={{ "--cv-accent": THEMES[theme] } as React.CSSProperties}
-						>
-							<Editable tag="h1" label="Edit name" value={cv.name} onChange={(v) => change("name", v)} />
-							{hasContent(cv.headline) && (
-								<Editable
-									tag="h2"
-									label="Edit professional title"
-									value={cv.headline}
-									onChange={(v) => change("headline", v)}
-								/>
-							)}
-							<div className="cv-contact">
-								{["email", "phone", "location"]
-									.filter((k) => hasContent(cv[k]))
-									.map((k) => (
-										<Editable key={k} label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
-									))}
-							</div>
-							<div className="cv-columns">
-								<div>
-									{["summary", "experience", "education", "additional"]
-										.filter((k) => hasContent(cv[k]))
-										.map((k) => (
-											<section key={k} className={format === "multipage" && k === "education" ? "page-start" : ""}>
-												<h2>{k === "additional" ? "Additional information" : k[0].toUpperCase() + k.slice(1)}</h2>
-												<Editable label={`Edit ${k}`} value={cv[k]} onChange={(v) => change(k as keyof CV, v)} />
-											</section>
-										))}
-								</div>
-								{shownSkills.some(hasContent) && (
-									<section className="cv-skills">
-										<h2>Skills</h2>
-										{shownSkills.map(
-											(s, i) =>
-												hasContent(s) && (
-													<Editable
-														key={i}
-														label={`Edit skill group ${i + 1}`}
-														value={s}
-														onChange={(v) => setShownSkills((old) => old.map((x, j) => (j === i ? v : x)))}
-													/>
-												),
-										)}
-									</section>
-								)}
-							</div>
-						</div>
-						<p className="muted">
-							PDF uses the same edited content with a print template. Screen and PDF pagination may differ; long
-							sections should be checked after export.
-						</p>
 					</section>
 				)}
 				{step > 0 && (
