@@ -1,6 +1,6 @@
 import { object, PLANNABLE_TYPES, SECTION_TYPES, string, strings, validateEntry } from "./section-model.mjs";
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const emptyTarget = () => ({ desiredJobs: [], industries: [], jobTitles: [], jobDescription: "" });
 export function normalizeTarget(raw, required = true) {
 	object(raw, ["desiredJobs", "industries", "jobTitles", "jobDescription"]);
@@ -84,6 +84,8 @@ export function newDraft(target = emptyTarget()) {
 		header: { name: "", professionalTitle: "", email: "", phone: "", location: "", links: [] },
 		sections: [],
 		legacyBackup: null,
+		rawText: "",
+		factsConfirmed: false,
 	};
 }
 export function acceptPlan(draft) {
@@ -97,8 +99,20 @@ export function acceptPlan(draft) {
 	};
 }
 export function validateDraft(raw) {
-	object(raw, ["schemaVersion", "target", "plan", "planTargetKey", "accepted", "header", "sections", "legacyBackup"]);
-	if (raw.schemaVersion !== SCHEMA_VERSION) throw Error("Unsupported draft version. Stored data was preserved.");
+	object(raw, [
+		"schemaVersion",
+		"target",
+		"plan",
+		"planTargetKey",
+		"accepted",
+		"header",
+		"sections",
+		"legacyBackup",
+		"rawText",
+		"factsConfirmed",
+	]);
+	if (![2, SCHEMA_VERSION].includes(raw.schemaVersion))
+		throw Error("Unsupported draft version. Stored data was preserved.");
 	const draft = newDraft(normalizeTarget(raw.target, false));
 	if (typeof raw.accepted !== "boolean") throw Error("Invalid acceptance state.");
 	object(raw.header, Object.keys(draft.header));
@@ -129,7 +143,7 @@ export function validateDraft(raw) {
 			["id", "type", "title"].some((key) => section[key] !== planned[key]) ||
 			typeof section.hidden !== "boolean" ||
 			!Array.isArray(section.items) ||
-			section.items.length > 100
+			section.items.length > (section.type === "summary" ? 1 : 100)
 		)
 			throw Error("Section plan mismatch.");
 		return {
@@ -143,6 +157,11 @@ export function validateDraft(raw) {
 		};
 	});
 	draft.legacyBackup = raw.legacyBackup ?? null;
+	draft.rawText = string(raw.rawText ?? "", 50000);
+	if (raw.factsConfirmed !== undefined && typeof raw.factsConfirmed !== "boolean")
+		throw Error("Invalid facts confirmation.");
+	draft.factsConfirmed = raw.factsConfirmed ?? false;
+	if (draft.factsConfirmed && !draft.accepted) throw Error("Confirm a section plan first.");
 	return draft;
 }
 export function migrateLegacy(raw) {

@@ -161,7 +161,7 @@ export const SECTION_TYPES = {
 	service: define(
 		"Academic & Professional Service",
 		["Academic Service", "Professional Service", "Editorial Service"],
-		position,
+		{ ...position, category: text },
 	),
 	awards: define("Honors & Awards", ["Awards & Recognition", "Awards", "Academic Distinctions"], {
 		name: text,

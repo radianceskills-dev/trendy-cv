@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { requestJSON } from "./ai";
 import { loadPlanDraft, savePlanDraft } from "./plan-storage";
+import { SectionEditor } from "./SectionEditor";
 import { acceptPlan, newDraft, normalizeTarget, PLAN_PROMPT, targetKey, validatePlan } from "./target-plan.mjs";
 import "./wizard.css";
 
@@ -170,8 +171,8 @@ export function TargetPlanner() {
 				)}
 				{draft.legacyBackup && (
 					<p>
-						Your previous CV draft is preserved. Its content will be available for migration when section editing is
-						connected.
+						Your previous CV draft is preserved. After accepting the plan, you can restore matching entries or extract
+						its text.
 					</p>
 				)}
 				<section>
@@ -254,12 +255,20 @@ export function TargetPlanner() {
 								{saving ? "Saving plan…" : "Accept and save section plan"}
 							</button>
 						) : (
-							<p role="status">
-								Plan accepted. Section editors are the next implementation phase; this planning preview does not yet
-								generate a CV.
-							</p>
+							<p role="status">Plan accepted. Fill and review your planned sections below.</p>
 						)}
 					</section>
+				)}
+				{draft.accepted && safe && (
+					<SectionEditor
+						draft={draft}
+						onChange={setDraft}
+						onConfirm={async (next) => {
+							await savePlanDraft(next);
+							setDraft(next);
+							setStatus("Confirmed facts saved in this browser");
+						}}
+					/>
 				)}
 			</main>
 		</>

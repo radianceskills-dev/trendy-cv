@@ -2,6 +2,12 @@
 
 ## Section model and target-planning preview
 
+Phase C now connects accepted plans to `SectionEditor.tsx`: personal details, registry-driven fields for all 15 standard types, repeatable entries, reordering, removal/undo and a persisted factual-confirmation checkpoint. Invalid entry edits stay in the current form buffer and show an unsaved error until corrected; confirmation and extraction are blocked while these exist. Original dates can be retained as wording alongside normalized dates.
+
+`section-content.mjs` validates staged extraction against fixed planned section IDs, assigns fresh local entry IDs, and replaces only explicitly reviewed sections/identity fields. Manual edits cancel extraction and invalidate pending proposals; snapshots also reject stale application. Original pasted text is saved locally. Legacy matching entries can be explicitly restored into empty sections without guessing missing dates or organizations.
+
+Schema version 3 adds `rawText` and `factsConfirmed`; version-2 drafts upgrade on load. Further edits reset factual confirmation. The new flow ends after confirming facts; optimization, photo selection, custom templates and named export remain future phases. Run `section-content.test.mjs` in addition to target-plan tests; `planning-smoke.cjs` now covers content entry, validation, reorder/undo, extraction approval, reload and reconfirmation behavior.
+
 The default entry now renders `TargetPlanner.tsx` (Phases A/B). Required desired jobs and industries lead to a reviewed AI keyword/section plan. Titles/JD are optional. Plan validation allows 15 standard section types, rejects custom/duplicate types, constrains initial titles, labels inferred keywords and checks JD evidence quotes. Acceptance persists a fixed plan and initializes empty typed sections. Section editing and downstream export are the next phase; the new flow explicitly ends after plan acceptance.
 
 `section-model.mjs` owns field descriptors, entry validation, date precision and meaningful-content checks. `target-plan.mjs` owns normalized targets, strict plan contracts, version-2 draft validation and nondestructive legacy import. `plan-storage.ts` serializes IndexedDB writes in `trendy-cv-planner`. Existing `trendy-cv-wizard` records are retained; original content and structured overrides are copied into a migration backup, not automatically assigned into the new plan. Unsupported/corrupt saved drafts pause autosave.
