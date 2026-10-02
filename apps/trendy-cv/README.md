@@ -1,5 +1,17 @@
 # Trendy CV
 
+## Local photo handling
+
+`PhotoEditor.tsx` supports JPEG/PNG/WebP upload (10 MB / 24 megapixel limits), square crop with zoom and horizontal/vertical positioning, replacement, cancellation and removal. Canvas re-encodes the selected crop as a 600×600 JPEG; only that blob is saved atomically with the draft in IndexedDB. Photo data is excluded from both extraction and optimization payloads. Schema v4 reads v2/v3 drafts with no-photo defaults. Browser tests cover crop save, dimensions, reload and persistent removal. Photo choice is stored for future template eligibility; custom template export remains pending.
+
+## Reviewed keyword optimization
+
+`OptimizationReview.tsx` now follows factual confirmation. `optimization.mjs` selects only approved wording fields and confirmed skill lists for AI, excluding the identity header, raw paste, links and factual metadata. Free text can still contain identifiers. Target context and keyword IDs guide bounded proposals (12 changes/12 questions maximum).
+
+Each proposal is reviewed before acceptance. Validators reject edits to immutable factual fields, unknown entry/keyword references, changed bullet counts and newly introduced numeric claims. These checks do not prove semantic truth: users must review wording for unsupported nonnumeric claims. Keyword gaps are questions and never become automatic claims. Accepted changes update the editor and autosaved draft; final manual editing resets factual confirmation and invalidates old suggestions. Cancellation and content-revision checks discard late results. Failed reviews preserve content, and users may finish with their current wording.
+
+Pending suggestions, decisions and the finish-review notice are session-local; accepted wording persists in the CV draft. Photo/template selection is not yet connected. Run `optimization.test.mjs` and the extended `planning-smoke.cjs` for the new stage.
+
 ## Section model and target-planning preview
 
 Phase C now connects accepted plans to `SectionEditor.tsx`: personal details, registry-driven fields for all 15 standard types, repeatable entries, reordering, removal/undo and a persisted factual-confirmation checkpoint. Invalid entry edits stay in the current form buffer and show an unsaved error until corrected; confirmation and extraction are blocked while these exist. Original dates can be retained as wording alongside normalized dates.

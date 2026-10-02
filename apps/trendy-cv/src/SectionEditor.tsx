@@ -102,6 +102,9 @@ type EntryProps = {
 };
 function EntryFields({ type, item, index, onSave, onDirty }: EntryProps) {
 	const [buffer, setBuffer] = useState(item);
+	useEffect(() => {
+		setBuffer(item);
+	}, [item]);
 	const [error, setError] = useState("");
 	function edit(key: string, value: unknown) {
 		const next = { ...buffer, [key]: value };
@@ -451,8 +454,8 @@ export function SectionEditor({
 			<p className="muted">Enter your name and at least one nonempty section to confirm.</p>
 			{draft.factsConfirmed && (
 				<p role="status">
-					Facts confirmed and saved. Keyword-based optimization is the next implementation phase. You can still edit;
-					editing clears this confirmation.
+					Facts confirmed and saved. You can review AI wording suggestions below. Manual editing clears this
+					confirmation.
 				</p>
 			)}
 		</section>

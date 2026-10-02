@@ -50,7 +50,7 @@ test("version 2 accepted draft upgrades with content defaults", () => {
 	delete draft.rawText;
 	delete draft.factsConfirmed;
 	draft.schemaVersion = 2;
-	assert.equal(validateDraft(draft).schemaVersion, 3);
+	assert.equal(validateDraft(draft).schemaVersion, 4);
 	assert.equal(validateDraft(draft).factsConfirmed, false);
 });
 test("legacy structured facts map once into empty sections, retain original wording", () => {

@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { requestJSON } from "./ai";
+import { OptimizationReview } from "./OptimizationReview";
+import { PhotoEditor } from "./PhotoEditor";
 import { loadPlanDraft, savePlanDraft } from "./plan-storage";
 import { SectionEditor } from "./SectionEditor";
 import { acceptPlan, newDraft, normalizeTarget, PLAN_PROMPT, targetKey, validatePlan } from "./target-plan.mjs";
@@ -271,6 +273,18 @@ export function TargetPlanner() {
 					/>
 				)}
 			</main>
+			{draft.accepted && safe && (
+				<div className="wizard">
+					<OptimizationReview draft={draft} onChange={setDraft} />
+					<PhotoEditor
+						photo={draft.photo}
+						onChange={async (photo) => {
+							await savePlanDraft({ ...draft, photo });
+							setDraft((current) => ({ ...current, photo }));
+						}}
+					/>
+				</div>
+			)}
 		</>
 	);
 }

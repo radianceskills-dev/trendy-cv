@@ -37,6 +37,35 @@ const assert = require("node:assert/strict");
 		await page.route("https://mock.invalid/chat", async (route) => {
 			calls++;
 			const input = JSON.parse(route.request().postDataJSON().messages[1].content);
+			if (input.keywords) {
+				assert(!JSON.stringify(input).includes("Pat Parsed"));
+				assert(!Object.hasOwn(input, "cvText"));
+				const section = input.sections[0];
+				await route.fulfill({
+					json: {
+						choices: [
+							{
+								message: {
+									content: JSON.stringify({
+										changes: [
+											{
+												sectionId: section.id,
+												entryId: section.items[0].id,
+												field: "highlights",
+												proposed: ["Developed reporting tools"],
+												reason: "Clearer action verb",
+												keywordIds: [input.keywords[0].id],
+											},
+										],
+										gaps: [{ keywordId: input.keywords[0].id, question: "Can you describe a problem you solved?" }],
+									}),
+								},
+							},
+						],
+					},
+				});
+				return;
+			}
 			if (input.cvText) {
 				assert.equal(input.sections.length, 1);
 				await route.fulfill({
@@ -167,11 +196,46 @@ const assert = require("node:assert/strict");
 		assert.equal(await page.getByLabel("Company / workplace (2)", { exact: true }).count(), 0);
 		await page.getByRole("button", { name: "My details are ready", exact: true }).click();
 		await page.getByRole("status").filter({ hasText: "Facts confirmed and saved" }).waitFor();
+		await page.getByRole("button", { name: "Optimize with AI", exact: true }).click();
+		await page.getByRole("button", { name: "Accept suggestion", exact: true }).waitFor();
+		assert.equal(
+			await page.getByLabel("Responsibilities / achievements (1)", { exact: true }).inputValue(),
+			"Built reporting tools",
+		);
+		await page.getByRole("button", { name: "Accept suggestion", exact: true }).click();
+		assert.equal(
+			await page.getByLabel("Responsibilities / achievements (1)", { exact: true }).inputValue(),
+			"Developed reporting tools",
+		);
+		await page.getByRole("button", { name: "Finish review / keep current wording", exact: true }).click();
+		await page.getByRole("status").filter({ hasText: "Wording review finished" }).waitFor();
 		await page.reload();
 		await page.getByRole("status").filter({ hasText: "Facts confirmed and saved" }).waitFor();
 		assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), "Pat Parsed");
 		await page.getByLabel("Name", { exact: true }).fill("Pat Final");
 		assert.equal(await page.getByRole("status").filter({ hasText: "Facts confirmed and saved" }).count(), 0);
+		const png = await page.evaluate(() => {
+			const c = document.createElement("canvas");
+			c.width = 120;
+			c.height = 160;
+			const ctx = c.getContext("2d");
+			ctx.fillStyle = "#276b89";
+			ctx.fillRect(0, 0, 120, 160);
+			return c.toDataURL("image/png").split(",")[1];
+		});
+		await page
+			.getByLabel("Upload or replace photo", { exact: true })
+			.setInputFiles({ name: "portrait.png", mimeType: "image/png", buffer: Buffer.from(png, "base64") });
+		await page.getByRole("button", { name: "Save cropped photo", exact: true }).click();
+		await page.getByRole("status").filter({ hasText: "Photo saved locally" }).waitFor();
+		await page.reload();
+		await page.getByAltText("Saved CV portrait").waitFor();
+		assert.equal(await page.getByAltText("Saved CV portrait").evaluate((img) => img.naturalWidth), 600);
+		await page.getByRole("button", { name: "Remove photo", exact: true }).click();
+		await page.getByRole("status").filter({ hasText: "Photo removed" }).waitFor();
+		await page.reload();
+		await page.getByLabel("Upload or replace photo", { exact: true }).waitFor();
+		assert.equal(await page.getByAltText("Saved CV portrait").count(), 0);
 		assert.deepEqual(errors, []);
 		console.log(
 			"PASS target requirements, invalid plans, stale response cancellation, acceptance and fixed-plan reload",

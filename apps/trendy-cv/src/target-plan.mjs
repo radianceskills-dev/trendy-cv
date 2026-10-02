@@ -1,6 +1,6 @@
 import { object, PLANNABLE_TYPES, SECTION_TYPES, string, strings, validateEntry } from "./section-model.mjs";
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 export const emptyTarget = () => ({ desiredJobs: [], industries: [], jobTitles: [], jobDescription: "" });
 export function normalizeTarget(raw, required = true) {
 	object(raw, ["desiredJobs", "industries", "jobTitles", "jobDescription"]);
@@ -86,6 +86,7 @@ export function newDraft(target = emptyTarget()) {
 		legacyBackup: null,
 		rawText: "",
 		factsConfirmed: false,
+		photo: null,
 	};
 }
 export function acceptPlan(draft) {
@@ -110,8 +111,9 @@ export function validateDraft(raw) {
 		"legacyBackup",
 		"rawText",
 		"factsConfirmed",
+		"photo",
 	]);
-	if (![2, SCHEMA_VERSION].includes(raw.schemaVersion))
+	if (![2, 3, SCHEMA_VERSION].includes(raw.schemaVersion))
 		throw Error("Unsupported draft version. Stored data was preserved.");
 	const draft = newDraft(normalizeTarget(raw.target, false));
 	if (typeof raw.accepted !== "boolean") throw Error("Invalid acceptance state.");
@@ -161,6 +163,12 @@ export function validateDraft(raw) {
 	if (raw.factsConfirmed !== undefined && typeof raw.factsConfirmed !== "boolean")
 		throw Error("Invalid facts confirmation.");
 	draft.factsConfirmed = raw.factsConfirmed ?? false;
+	if (
+		raw.photo != null &&
+		(!(raw.photo instanceof Blob) || raw.photo.type !== "image/jpeg" || raw.photo.size > 2 * 1024 * 1024)
+	)
+		throw Error("Invalid saved photo.");
+	draft.photo = raw.photo ?? null;
 	if (draft.factsConfirmed && !draft.accepted) throw Error("Confirm a section plan first.");
 	return draft;
 }
