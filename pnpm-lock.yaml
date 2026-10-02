@@ -498,6 +498,9 @@ importers:
 
   apps/trendy-cv:
     dependencies:
+      '@react-pdf/renderer':
+        specifier: ^4.9.0
+        version: 4.9.0(react@19.3.0)
       '@reactive-resume/import':
         specifier: workspace:*
         version: link:../../packages/import

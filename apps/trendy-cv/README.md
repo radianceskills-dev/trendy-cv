@@ -1,5 +1,15 @@
 # Trendy CV
 
+## Custom template selection and named PDF export
+
+`TemplateExport.tsx` offers Studio, Chronicle, Precision, Blueprint and Scholar, automatically using the saved photo when present. `custom-pdf.tsx` renders canonical section data directly with React-pdf; preview/download share one PDF blob. No inline editing. These are initial native ports of the local HTML concepts and still need human visual approval.
+
+Eligibility first checks populated sections and supported types, then checks selected output for page count and out-of-page text. Compact designs have explicit product limits (Studio: 8 sections/2 pages; Chronicle and Blueprint: 10/3). Precision/Scholar allow 15 sections/30 pages. These are conservative product limits, not universal fit guarantees. Every selection is rendered before saving is enabled. Only the selected candidate is measured; structural candidates may subsequently fail fit. Studio uses a skills rail only when that preserves canonical section order. Long entries flow across pages. Initial fonts are Helvetica/Times; multilingual font coverage is not yet validated.
+
+Save prompts for a CV name and writes an independent editable snapshot, photo, paper and template to `trendy-cv-library`, then downloads the preview PDF. Each save creates a new copy, including duplicate names. Saved records can be reopened or explicitly deleted; in-place update is not implemented. Preview generation is required before this save/export action. Local storage failure prevents a success message. The active draft and named library remain separate.
+
+Tests: `template-catalog.test.mjs` and `planning-smoke.cjs` cover filtering, field preservation, all five photo layouts, naming, download and restoring photo/template from a saved record. Comprehensive long-content visual and multilingual fixtures remain follow-up validation.
+
 ## Local photo handling
 
 `PhotoEditor.tsx` supports JPEG/PNG/WebP upload (10 MB / 24 megapixel limits), square crop with zoom and horizontal/vertical positioning, replacement, cancellation and removal. Canvas re-encodes the selected crop as a 600×600 JPEG; only that blob is saved atomically with the draft in IndexedDB. Photo data is excluded from both extraction and optimization payloads. Schema v4 reads v2/v3 drafts with no-photo defaults. Browser tests cover crop save, dimensions, reload and persistent removal. Photo choice is stored for future template eligibility; custom template export remains pending.

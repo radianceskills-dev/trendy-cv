@@ -4,6 +4,7 @@ import { OptimizationReview } from "./OptimizationReview";
 import { PhotoEditor } from "./PhotoEditor";
 import { loadPlanDraft, savePlanDraft } from "./plan-storage";
 import { SectionEditor } from "./SectionEditor";
+import { TemplateExport } from "./TemplateExport";
 import { acceptPlan, newDraft, normalizeTarget, PLAN_PROMPT, targetKey, validatePlan } from "./target-plan.mjs";
 import "./wizard.css";
 
@@ -21,6 +22,7 @@ const toTarget = (inputs: Inputs, required = true) =>
 	);
 
 export function TargetPlanner() {
+	const [openedVersion, setOpenedVersion] = useState(0);
 	const [draft, setDraft] = useState(newDraft);
 	const [inputs, setInputs] = useState<Inputs>(emptyInputs);
 	const [ready, setReady] = useState(false);
@@ -263,6 +265,7 @@ export function TargetPlanner() {
 				)}
 				{draft.accepted && safe && (
 					<SectionEditor
+						key={openedVersion}
 						draft={draft}
 						onChange={setDraft}
 						onConfirm={async (next) => {
@@ -281,6 +284,20 @@ export function TargetPlanner() {
 						onChange={async (photo) => {
 							await savePlanDraft({ ...draft, photo });
 							setDraft((current) => ({ ...current, photo }));
+						}}
+					/>
+					<TemplateExport
+						draft={draft}
+						onOpen={async (next) => {
+							await savePlanDraft(next);
+							setDraft(next);
+							setOpenedVersion((version) => version + 1);
+							setInputs({
+								jobs: next.target.desiredJobs.join("\n"),
+								industries: next.target.industries.join("\n"),
+								titles: next.target.jobTitles.join("\n"),
+								jd: next.target.jobDescription,
+							});
 						}}
 					/>
 				</div>

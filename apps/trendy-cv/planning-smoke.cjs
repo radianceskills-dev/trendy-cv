@@ -230,11 +230,34 @@ const assert = require("node:assert/strict");
 		await page.reload();
 		await page.getByAltText("Saved CV portrait").waitFor();
 		assert.equal(await page.getByAltText("Saved CV portrait").evaluate((img) => img.naturalWidth), 600);
+		await page.getByRole("button", { name: "My details are ready", exact: true }).click();
+		for (const name of ["Studio", "Chronicle", "Precision", "Blueprint", "Scholar"]) {
+			await page.getByRole("button", { name: new RegExp(`^${name} `) }).click();
+			await page.getByText(new RegExp(`verified PDF pages · ${name}`)).waitFor({ timeout: 60000 });
+			await page.getByRole("status").filter({ hasText: "1 page · PDF preview" }).waitFor({ timeout: 60000 });
+			assert((await page.locator(".pdf-pages").textContent()).includes("Parsed Company"));
+		}
+		await page.getByRole("button", { name: "Save CV & download PDF", exact: true }).click();
+		await page.getByLabel("CV name", { exact: true }).fill("Engineering CV");
+		const downloaded = page.waitForEvent("download");
+		await page.getByRole("button", { name: "Save named CV", exact: true }).click();
+		const file = await downloaded;
+		assert.equal(file.suggestedFilename(), "Engineering CV.pdf");
+		assert(
+			fs
+				.readFileSync(await file.path())
+				.subarray(0, 5)
+				.toString() === "%PDF-",
+		);
 		await page.getByRole("button", { name: "Remove photo", exact: true }).click();
 		await page.getByRole("status").filter({ hasText: "Photo removed" }).waitFor();
 		await page.reload();
 		await page.getByLabel("Upload or replace photo", { exact: true }).waitFor();
 		assert.equal(await page.getByAltText("Saved CV portrait").count(), 0);
+		await page.getByText("Saved CVs in this browser (1)", { exact: true }).click();
+		await page.getByRole("button", { name: "Open Engineering CV", exact: true }).click();
+		await page.getByAltText("Saved CV portrait").waitFor();
+		await page.getByText("1 verified PDF pages · Scholar", { exact: true }).waitFor({ timeout: 60000 });
 		assert.deepEqual(errors, []);
 		console.log(
 			"PASS target requirements, invalid plans, stale response cancellation, acceptance and fixed-plan reload",
