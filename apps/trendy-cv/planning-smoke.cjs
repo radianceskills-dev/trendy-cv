@@ -1,4 +1,4 @@
-const { chromium } = require("@playwright/test");
+const { chromium, expect } = require("@playwright/test");
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -203,8 +203,7 @@ const assert = require("node:assert/strict");
 			"Built reporting tools",
 		);
 		await page.getByRole("button", { name: "Accept suggestion", exact: true }).click();
-		assert.equal(
-			await page.getByLabel("Responsibilities / achievements (1)", { exact: true }).inputValue(),
+		await expect(page.getByLabel("Responsibilities / achievements (1)", { exact: true })).toHaveValue(
 			"Developed reporting tools",
 		);
 		await page.getByRole("button", { name: "Finish review / keep current wording", exact: true }).click();
