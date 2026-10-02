@@ -1,4 +1,6 @@
+import { appendActivity, finishActivity, startActivity } from "./ai-activity";
 import { parseAIJSON, withDeadline } from "./ai-json.mjs";
+import { readAIStream } from "./ai-stream.mjs";
 import { parseReviewYAML } from "./review.mjs";
 
 type Payload = {
@@ -28,20 +30,47 @@ export function settings() {
 	return { ...s, endpoint };
 }
 export function requestJSON(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
-	return withDeadline(
-		async (requestSignal: AbortSignal) => parseAIJSON(await requestText(system, input, requestSignal)),
-		signal,
-	);
+	return trackedRequest(system, input, signal, parseAIJSON);
 }
 
 export function requestReview(system: string, input: unknown, signal: AbortSignal): Promise<unknown> {
-	return withDeadline(
-		async (requestSignal: AbortSignal) => parseReviewYAML(await requestText(system, input, requestSignal)),
-		signal,
-	);
+	return trackedRequest(system, input, signal, parseReviewYAML);
 }
 
-async function requestText(system: string, input: unknown, signal: AbortSignal): Promise<string> {
+async function trackedRequest(system: string, input: unknown, signal: AbortSignal, parse: (text: string) => unknown) {
+	const label =
+		system.startsWith("Plan a CV") || system.startsWith("Structure job")
+			? "Target planning"
+			: system.startsWith("Extract")
+				? "CV extraction"
+				: system.startsWith("Improve CV") || system.startsWith("Optimize")
+					? "CV optimization"
+					: "CV review";
+	const id = startActivity(label);
+	try {
+		const result = await withDeadline(
+			async (s: AbortSignal) =>
+				parse(
+					await requestText(system, input, s, (text) => {
+						if (!s.aborted) appendActivity(id, text);
+					}),
+				),
+			signal,
+		);
+		finishActivity(id, "complete");
+		return result;
+	} catch (e) {
+		finishActivity(id, signal.aborted ? "cancelled" : "failed", e instanceof Error ? e.message : "AI request failed");
+		throw e;
+	}
+}
+
+async function requestText(
+	system: string,
+	input: unknown,
+	signal: AbortSignal,
+	onText: (text: string) => void,
+): Promise<string> {
 	const s = settings();
 	const messages = [
 		{
@@ -67,10 +96,11 @@ async function requestText(system: string, input: unknown, signal: AbortSignal):
 		const r = await fetch(s.endpoint, {
 			method: "POST",
 			headers: { Authorization: `Bearer ${s.apiKey}`, "Content-Type": "application/json" },
-			body: JSON.stringify({ model: s.model, messages, temperature: 0.1 }),
+			body: JSON.stringify({ model: s.model, messages, temperature: 0.1, stream: true }),
 			signal,
 		});
 		if (!r.ok) throw Error(`AI request failed (${r.status})`);
+		if (r.headers.get("content-type")?.includes("text/event-stream")) return readAIStream(r, onText);
 		payload = await r.json();
 	}
 	if (signal.aborted) throw Error("Cancelled");
@@ -80,6 +110,7 @@ async function requestText(system: string, input: unknown, signal: AbortSignal):
 	const content =
 		typeof payload === "string" ? payload : (payload?.choices?.[0]?.message?.content ?? payload?.message?.content);
 	if (typeof content !== "string" || !content.trim()) throw Error("AI returned no text.");
+	onText(content);
 	return content;
 }
 

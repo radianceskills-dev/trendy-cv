@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { AISymbol } from "./AIActivity";
 import { requestJSON, requestReview } from "./ai";
 import { applyReviewChange, REVIEW_YAML_PROMPT, validateReview } from "./review.mjs";
 import {
@@ -367,6 +368,7 @@ export function Wizard() {
 							</a>
 						</p>
 						<button type="button" disabled={!ready} onClick={nextTarget}>
+							<AISymbol />
 							Next: Your CV
 						</button>
 					</section>
@@ -376,6 +378,7 @@ export function Wizard() {
 						<h1>Tell us about yourself</h1>
 						<p role="status">{targetStatus}</p>
 						<button type="button" disabled={busy} onClick={analyzeTarget}>
+							<AISymbol />
 							Retry target analysis
 						</button>
 						{target && (
@@ -418,11 +421,13 @@ export function Wizard() {
 						<p role="status">{reviewProgress}</p>
 						{mode === "text" ? (
 							<button type="button" disabled={busy || !raw.trim()} onClick={parseCV}>
+								<AISymbol />
 								Fill my details
 							</button>
 						) : (
 							<>
 								<button type="button" disabled={busy} onClick={reviewCV}>
+									<AISymbol />
 									Review with AI
 								</button>
 								<button
@@ -533,6 +538,7 @@ export function Wizard() {
 							Your complete skills list remains in the draft. Choose and compare visual templates in the next step.
 						</p>
 						<button type="button" disabled={busy} onClick={optimize}>
+							<AISymbol />
 							{busy ? "Grouping skills…" : "Group skills with AI & create CV"}
 						</button>
 						<button

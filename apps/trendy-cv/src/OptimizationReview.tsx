@@ -1,5 +1,6 @@
 import type { newDraft } from "./target-plan.mjs";
 import { useEffect, useRef, useState } from "react";
+import { AISymbol } from "./AIActivity";
 import { requestJSON } from "./ai";
 import {
 	applyOptimizationChange,
@@ -78,6 +79,7 @@ export function OptimizationReview({ draft, onChange }: { draft: Draft; onChange
 			<p>Check every proposal for accuracy. Keyword gaps are questions, not new claims added to your CV.</p>
 			{!draft.factsConfirmed && <p>Confirm your facts above to request optimization.</p>}
 			<button type="button" disabled={!draft.factsConfirmed || busy} onClick={optimize}>
+				<AISymbol />
 				{review ? "Request a fresh optimization review" : "Optimize with AI"}
 			</button>
 			{busy && (

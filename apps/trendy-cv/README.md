@@ -1,5 +1,9 @@
 # Trendy CV
 
+## AI activity visibility
+
+AI request buttons show a decorative sparkle without changing their accessible names. A shared floating activity button animates while requests run and opens session-local raw generated output (latest eight completed requests plus active work). OpenAI-compatible transports request SSE streaming; JSON responses remain supported. Puter currently shows its completed response when returned. Activity covers cancellation, timeout, parse failures and concurrent requests. Output is rendered as literal text, never HTML; no prompts or credentials are added to the panel. Reduced-motion settings disable animations. Structured proposals still require their normal editor approval.
+
 ## Custom template selection and named PDF export
 
 `TemplateExport.tsx` offers Studio, Chronicle, Precision, Blueprint and Scholar, automatically using the saved photo when present. `custom-pdf.tsx` renders canonical section data directly with React-pdf; preview/download share one PDF blob. No inline editing. These are initial native ports of the local HTML concepts and still need human visual approval.

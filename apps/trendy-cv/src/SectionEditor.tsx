@@ -1,5 +1,6 @@
 import type { newDraft } from "./target-plan.mjs";
 import { useEffect, useRef, useState } from "react";
+import { AISymbol } from "./AIActivity";
 import { requestJSON } from "./ai";
 import {
 	applyExtraction,
@@ -231,6 +232,7 @@ export function SectionEditor({
 						onChange={(v) => change({ ...draft, rawText: String(v) })}
 					/>
 					<button type="button" disabled={busy || blocked} onClick={extract}>
+						<AISymbol />
 						Extract into planned sections
 					</button>
 					{busy && (

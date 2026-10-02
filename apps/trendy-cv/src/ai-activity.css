@@ -1,0 +1,89 @@
+.ai-activity {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	z-index: 1000;
+	font:
+		14px / 1.5 Arial,
+		sans-serif;
+}
+.ai-float {
+	background: #245e79;
+	color: white;
+	border: 0;
+	border-radius: 28px;
+	padding: 14px 20px;
+	box-shadow: 0 4px 20px #18374740;
+	cursor: pointer;
+}
+.ai-float.generating {
+	animation: ai-pulse 1.5s ease-in-out infinite;
+}
+.ai-float.generating span {
+	display: inline-block;
+	animation: ai-turn 3s linear infinite;
+}
+.ai-output {
+	position: absolute;
+	bottom: 65px;
+	right: 0;
+	width: min(440px, calc(100vw - 32px));
+	max-height: 70vh;
+	overflow: auto;
+	background: #f5f9fb;
+	border: 1px solid #bccfd9;
+	border-radius: 14px;
+	padding: 18px;
+	box-shadow: 0 12px 40px #18374730;
+	color: #203541;
+}
+.ai-output-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+}
+.ai-output pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	background: #e7eff3;
+	padding: 12px;
+	font-size: 12px;
+}
+.ai-output h3 {
+	font-size: 14px;
+}
+.ai-output p {
+	font-size: 12px;
+}
+.ai-output article {
+	border-top: 1px solid #cbd8df;
+	margin-top: 16px;
+}
+.ai-output button {
+	cursor: pointer;
+}
+@keyframes ai-pulse {
+	50% {
+		box-shadow: 0 0 0 9px #245e7920;
+	}
+}
+@keyframes ai-turn {
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.ai-float.generating,
+	.ai-float.generating span {
+		animation: none;
+	}
+	.ai-float.generating {
+		outline: 3px solid #7ab9d1;
+	}
+}
+@media print {
+	.ai-activity {
+		display: none;
+	}
+}

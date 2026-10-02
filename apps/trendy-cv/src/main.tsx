@@ -6,6 +6,7 @@ import { defaultResumeData } from "@reactive-resume/schema/resume/default";
 import { templateSchema } from "@reactive-resume/schema/templates";
 import { rewrite } from "./ai";
 import "./style.css";
+import { AIActivity } from "./AIActivity";
 import { TargetPlanner } from "./TargetPlanner";
 import { Wizard } from "./Wizard";
 
@@ -590,4 +591,10 @@ export function LegacyEditor() {
 	);
 }
 const root = document.getElementById("root");
-if (root) createRoot(root).render(new URLSearchParams(location.search).has("legacy") ? <Wizard /> : <TargetPlanner />);
+if (root)
+	createRoot(root).render(
+		<>
+			{new URLSearchParams(location.search).has("legacy") ? <Wizard /> : <TargetPlanner />}
+			<AIActivity />
+		</>,
+	);

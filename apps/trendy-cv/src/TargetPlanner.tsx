@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AISymbol } from "./AIActivity";
 import { requestJSON } from "./ai";
 import { OptimizationReview } from "./OptimizationReview";
 import { PhotoEditor } from "./PhotoEditor";
@@ -217,6 +218,7 @@ export function TargetPlanner() {
 								</a>
 							</p>
 							<button type="button" disabled={!ready || !safe || busy || saving} onClick={generate}>
+								<AISymbol />
 								{draft.plan ? "Regenerate plan" : "Generate CV plan"}
 							</button>
 							{busy && (
