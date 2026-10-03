@@ -1,5 +1,7 @@
 # Trendy CV
 
+Startup now shows Create new CV, Continue current draft (when populated), and named saved CVs. Merely opening the app does not autosave/overwrite the current draft. Creating a new CV or opening a saved record first archives a populated current draft in the local library, then switches only after successful storage. Saved selections restore paper/template and photo. Storage errors block destructive switching. Browser coverage includes start choices, reload/continue, a blank new CV and reopening a saved photo/template.
+
 AI requests have no application-imposed time limit. Manual cancellation still aborts fetch/streaming and discards late responses from non-abortable providers. Provider-side or network timeouts may still occur. Custom endpoints continue to require HTTPS.
 
 ## AI activity visibility

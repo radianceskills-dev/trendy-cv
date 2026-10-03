@@ -7,10 +7,15 @@ import { pdfFileName, TEMPLATE_CATALOG, templateEligibility } from "./template-c
 
 const PdfPages = lazy(() => import("./PdfPages"));
 type Draft = ReturnType<typeof newDraft>;
-type Props = { draft: Draft; onOpen: (draft: Draft) => Promise<void> };
-export function TemplateExport({ draft, onOpen }: Props) {
-	const [template, setTemplate] = useState("precision");
-	const [paper, setPaper] = useState<"a4" | "letter">("a4");
+type Props = {
+	draft: Draft;
+	onOpen: (draft: Draft) => Promise<void>;
+	initialTemplate?: string;
+	initialPaper?: "a4" | "letter";
+};
+export function TemplateExport({ draft, onOpen, initialTemplate = "precision", initialPaper = "a4" }: Props) {
+	const [template, setTemplate] = useState(initialTemplate);
+	const [paper, setPaper] = useState<"a4" | "letter">(initialPaper);
 	const [records, setRecords] = useState<SavedCV[]>([]);
 	const [name, setName] = useState("");
 	const [naming, setNaming] = useState(false);

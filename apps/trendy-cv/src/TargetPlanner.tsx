@@ -1,12 +1,22 @@
+import type { SavedCV } from "./cv-library";
 import { useEffect, useRef, useState } from "react";
 import { AISymbol } from "./AIActivity";
 import { requestJSON } from "./ai";
+import { library } from "./cv-library";
 import { OptimizationReview } from "./OptimizationReview";
 import { PhotoEditor } from "./PhotoEditor";
 import { loadPlanDraft, savePlanDraft } from "./plan-storage";
 import { SectionEditor } from "./SectionEditor";
 import { TemplateExport } from "./TemplateExport";
-import { acceptPlan, newDraft, normalizeTarget, PLAN_PROMPT, targetKey, validatePlan } from "./target-plan.mjs";
+import {
+	acceptPlan,
+	newDraft,
+	normalizeTarget,
+	PLAN_PROMPT,
+	targetKey,
+	validateDraft,
+	validatePlan,
+} from "./target-plan.mjs";
 import "./wizard.css";
 
 type Inputs = { jobs: string; industries: string; titles: string; jd: string };
@@ -23,6 +33,10 @@ const toTarget = (inputs: Inputs, required = true) =>
 	);
 
 export function TargetPlanner() {
+	const [started, setStarted] = useState(false);
+	const [records, setRecords] = useState<SavedCV[]>([]);
+	const [libraryError, setLibraryError] = useState("");
+	const [initialDesign, setInitialDesign] = useState({ template: "precision", paper: "a4" as "a4" | "letter" });
 	const [openedVersion, setOpenedVersion] = useState(0);
 	const [draft, setDraft] = useState(newDraft);
 	const [inputs, setInputs] = useState<Inputs>(emptyInputs);
@@ -57,6 +71,13 @@ export function TargetPlanner() {
 			.finally(() => {
 				if (active) setReady(true);
 			});
+		library("list")
+			.then((values) => {
+				if (active) setRecords(values);
+			})
+			.catch((e) => {
+				if (active) setLibraryError(`Saved CVs could not be loaded: ${e.message}`);
+			});
 		return () => {
 			active = false;
 			request.current?.abort();
@@ -64,7 +85,7 @@ export function TargetPlanner() {
 		};
 	}, []);
 	useEffect(() => {
-		if (!ready || !safe) return;
+		if (!ready || !safe || !started) return;
 		let active = true;
 		const timer = setTimeout(() => {
 			savePlanDraft(draft)
@@ -82,7 +103,50 @@ export function TargetPlanner() {
 			active = false;
 			clearTimeout(timer);
 		};
-	}, [draft, ready, safe]);
+	}, [draft, ready, safe, started]);
+	const hasCurrent = !!(
+		draft.accepted ||
+		draft.legacyBackup ||
+		draft.rawText ||
+		draft.photo ||
+		draft.header.name ||
+		draft.target.desiredJobs.length ||
+		draft.target.industries.length ||
+		draft.target.jobTitles.length ||
+		draft.target.jobDescription
+	);
+	async function start(record?: SavedCV) {
+		setSaving(true);
+		setError("");
+		try {
+			const next = record ? validateDraft(record.draft) : newDraft();
+			if (hasCurrent)
+				await library("save", {
+					id: crypto.randomUUID(),
+					name: `Draft — ${draft.header.name || draft.target.desiredJobs.join(", ") || "Untitled"} — ${new Date().toLocaleString()}`,
+					updatedAt: new Date().toISOString(),
+					...initialDesign,
+					draft,
+				});
+			await savePlanDraft(next);
+			setDraft(next);
+			setInputs({
+				jobs: next.target.desiredJobs.join("\n"),
+				industries: next.target.industries.join("\n"),
+				titles: next.target.jobTitles.join("\n"),
+				jd: next.target.jobDescription,
+			});
+			setInitialDesign(
+				record ? { template: record.template, paper: record.paper } : { template: "precision", paper: "a4" },
+			);
+			setOpenedVersion((v) => v + 1);
+			setStarted(true);
+		} catch (e) {
+			setError(e instanceof Error ? e.message : "Could not open CV. Existing draft preserved.");
+		} finally {
+			setSaving(false);
+		}
+	}
 	function cancel() {
 		revision.current++;
 		request.current?.abort();
@@ -142,6 +206,50 @@ export function TargetPlanner() {
 			setSaving(false);
 		}
 	}
+	if (!started)
+		return (
+			<>
+				<header>
+					<a href="/">← Trendy Tools</a>
+					<strong>Trendy CV</strong>
+				</header>
+				<main className="wizard">
+					<section>
+						<h1>Welcome to your CV workspace</h1>
+						<p>Create a new CV or pick up where you left off. Your drafts are stored in this browser.</p>
+						{!ready && <p role="status">Loading local drafts…</p>}
+						{error && <p role="alert">{error}</p>}
+						{libraryError && <p role="alert">{libraryError}</p>}
+						<button type="button" disabled={!ready || !safe || saving} onClick={() => start()}>
+							Create new CV
+						</button>
+						{hasCurrent && (
+							<button type="button" disabled={!ready || !safe || saving} onClick={() => setStarted(true)}>
+								Continue current draft
+							</button>
+						)}
+						{hasCurrent && (
+							<p>
+								Starting a new CV or opening another saved CV first keeps a copy of your current draft in Saved CVs.
+							</p>
+						)}
+						<h2>Saved CVs</h2>
+						{!records.length && !libraryError && <p>No saved CVs yet.</p>}
+						{[...records]
+							.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+							.map((record) => (
+								<article key={record.id}>
+									<h3>{record.name}</h3>
+									<p>{new Date(record.updatedAt).toLocaleString()}</p>
+									<button type="button" disabled={!ready || !safe || saving} onClick={() => start(record)}>
+										Open {record.name}
+									</button>
+								</article>
+							))}
+					</section>
+				</main>
+			</>
+		);
 	return (
 		<>
 			<header>
@@ -289,6 +397,8 @@ export function TargetPlanner() {
 						}}
 					/>
 					<TemplateExport
+						initialTemplate={initialDesign.template}
+						initialPaper={initialDesign.paper}
 						draft={draft}
 						onOpen={async (next) => {
 							await savePlanDraft(next);
