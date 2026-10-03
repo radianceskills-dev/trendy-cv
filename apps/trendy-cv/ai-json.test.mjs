@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseAIJSON, withDeadline } from "./src/ai-json.mjs";
+import { parseAIJSON, withCancellation } from "./src/ai-json.mjs";
 import { emptyCV, validateCV } from "./src/wizard-model.mjs";
 
 test("valid JSON preserves text and punctuation", () =>
@@ -15,24 +15,24 @@ test("rejects empty or oversized model output", () => {
 	assert.throws(() => parseAIJSON(""));
 	assert.throws(() => parseAIJSON("x".repeat(100001)));
 });
-test("deadline bounds non-abortable provider promises", async () => {
+test("requests remain pending beyond the former deadline", async (t) => {
+	t.mock.timers.enable({ apis: ["setTimeout"] });
+	let complete;
 	let inner;
-	await assert.rejects(
-		withDeadline(
-			(signal) => {
-				inner = signal;
-				return new Promise(() => {});
-			},
-			new AbortController().signal,
-			10,
-		),
-		/timed out/,
-	);
-	assert(inner.aborted);
+	const result = withCancellation((signal) => {
+		inner = signal;
+		return new Promise((resolve) => {
+			complete = resolve;
+		});
+	}, new AbortController().signal);
+	t.mock.timers.tick(180000);
+	assert.equal(inner.aborted, false);
+	complete("finished");
+	assert.equal(await result, "finished");
 });
 test("cancel discards non-abortable provider output", async () => {
 	const c = new AbortController();
-	const result = withDeadline(() => new Promise(() => {}), c.signal);
+	const result = withCancellation(() => new Promise(() => {}), c.signal);
 	c.abort();
 	await assert.rejects(result, /Cancelled/);
 });

@@ -1,5 +1,7 @@
 # Trendy CV
 
+AI requests have no application-imposed time limit. Manual cancellation still aborts fetch/streaming and discards late responses from non-abortable providers. Provider-side or network timeouts may still occur. Custom endpoints continue to require HTTPS.
+
 ## AI activity visibility
 
 AI request buttons show a decorative sparkle without changing their accessible names. A shared floating activity button animates while requests run and opens session-local raw generated output (latest eight completed requests plus active work). OpenAI-compatible transports request SSE streaming; JSON responses remain supported. Puter currently shows its completed response when returned. Activity covers cancellation, timeout, parse failures and concurrent requests. Output is rendered as literal text, never HTML; no prompts or credentials are added to the panel. Reduced-motion settings disable animations. Structured proposals still require their normal editor approval.

@@ -14,9 +14,8 @@ export function parseAIJSON(content) {
 	}
 }
 
-export async function withDeadline(task, signal, milliseconds = 90000) {
+export async function withCancellation(task, signal) {
 	const controller = new AbortController();
-	let timer;
 	let abort;
 	const stopped = new Promise((_, reject) => {
 		abort = () => {
@@ -25,16 +24,11 @@ export async function withDeadline(task, signal, milliseconds = 90000) {
 		};
 		if (signal.aborted) abort();
 		else signal.addEventListener("abort", abort, { once: true });
-		timer = setTimeout(() => {
-			controller.abort();
-			reject(Error("AI request timed out after 90 seconds. Your draft is unchanged. Retry or choose a faster model."));
-		}, milliseconds);
 	});
 	try {
 		if (signal.aborted) throw Error("Cancelled");
 		return await Promise.race([stopped, task(controller.signal)]);
 	} finally {
-		clearTimeout(timer);
 		signal.removeEventListener("abort", abort);
 	}
 }

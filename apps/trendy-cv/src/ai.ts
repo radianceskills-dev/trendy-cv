@@ -1,5 +1,5 @@
 import { appendActivity, finishActivity, startActivity } from "./ai-activity";
-import { parseAIJSON, withDeadline } from "./ai-json.mjs";
+import { parseAIJSON, withCancellation } from "./ai-json.mjs";
 import { readAIStream } from "./ai-stream.mjs";
 import { parseReviewYAML } from "./review.mjs";
 
@@ -48,7 +48,7 @@ async function trackedRequest(system: string, input: unknown, signal: AbortSigna
 					: "CV review";
 	const id = startActivity(label);
 	try {
-		const result = await withDeadline(
+		const result = await withCancellation(
 			async (s: AbortSignal) =>
 				parse(
 					await requestText(system, input, s, (text) => {
