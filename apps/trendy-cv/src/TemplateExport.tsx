@@ -67,8 +67,6 @@ export function TemplateExport({ draft, onOpen, initialTemplate = "precision", i
 				try {
 					const pdf = await task.promise;
 					pages = pdf.numPages;
-					if (pages > TEMPLATE_CATALOG[template].maxPages)
-						throw Error(`Content needs ${pages} pages; choose Precision or Scholar for a longer CV.`);
 					for (let n = 1; n <= pages; n++) {
 						const page = await pdf.getPage(n);
 						const text = await page.getTextContent();

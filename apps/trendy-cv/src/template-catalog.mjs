@@ -5,36 +5,26 @@ export const TEMPLATE_CATALOG = {
 		name: "Studio",
 		description: "Deep green masthead and supporting skills rail",
 		accent: "#184e44",
-		maxSections: 8,
-		maxPages: 2,
 	},
 	chronicle: {
 		name: "Chronicle",
 		description: "Warm paper, copper rules and career dates",
 		accent: "#99593e",
-		maxSections: 10,
-		maxPages: 3,
 	},
 	precision: {
 		name: "Precision",
 		description: "Clean single-column professional résumé",
 		accent: "#25566a",
-		maxSections: 15,
-		maxPages: 30,
 	},
 	blueprint: {
 		name: "Blueprint",
 		description: "Structured technical résumé with blue accents",
 		accent: "#345cb1",
-		maxSections: 10,
-		maxPages: 3,
 	},
 	scholar: {
 		name: "Scholar",
 		description: "Serif academic CV with flowing research sections",
 		accent: "#564c70",
-		maxSections: 15,
-		maxPages: 30,
 	},
 };
 export function templateEligibility(draft, template) {
@@ -44,8 +34,6 @@ export function templateEligibility(draft, template) {
 	if (!sections.length) return { eligible: false, reason: "Add content to a planned section first." };
 	if (sections.some((s) => !Object.hasOwn(SECTION_TYPES, s.type) || s.type === "custom"))
 		return { eligible: false, reason: "Unsupported section type." };
-	if (sections.length > config.maxSections)
-		return { eligible: false, reason: `This layout supports up to ${config.maxSections} populated sections.` };
 	return { eligible: true, reason: "" };
 }
 export function entryBlocks(type, item) {

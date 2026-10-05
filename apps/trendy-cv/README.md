@@ -1,5 +1,7 @@
 # Trendy CV
 
+All five templates now have no template-specific section-count or page-count caps. Unsupported/empty content checks and actual PDF text-boundary checks remain. This removes the former 2/3/30-page restrictions; it does not certify visual pagination quality for every long CV.
+
 Extraction opens the AI output panel automatically, shows elapsed seconds and scrolls to staged results. SSE completion stops on `[DONE]` or a finish reason without waiting for socket closure. Provider reasoning events display a progress status (not reasoning text); only answer content enters JSON parsing.
 
 Startup now shows Create new CV, Continue current draft (when populated), and named saved CVs. Merely opening the app does not autosave/overwrite the current draft. Creating a new CV or opening a saved record first archives a populated current draft in the local library, then switches only after successful storage. Saved selections restore paper/template and photo. Storage errors block destructive switching. Browser coverage includes start choices, reload/continue, a blank new CV and reopening a saved photo/template.

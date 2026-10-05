@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { entryBlocks, pdfFileName, TEMPLATE_CATALOG, templateEligibility } from "./src/template-catalog.mjs";
 
-test("five families filter populated counts rather than empty planned sections", () => {
+test("all five families allow every standard section without count caps", () => {
 	assert.equal(Object.keys(TEMPLATE_CATALOG).length, 5);
 	const draft = {
 		sections: Array.from({ length: 12 }, (_, i) => ({
@@ -11,8 +11,7 @@ test("five families filter populated counts rather than empty planned sections",
 			items: i < 9 ? [{ id: String(i), description: "Work" }] : [],
 		})),
 	};
-	assert(!templateEligibility(draft, "studio").eligible);
-	assert(templateEligibility(draft, "precision").eligible);
+	for (const template of Object.keys(TEMPLATE_CATALOG)) assert(templateEligibility(draft, template).eligible);
 });
 test("entry projection preserves specialized fields, zero amounts and literal text", () => {
 	const item = {
