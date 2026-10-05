@@ -4,6 +4,7 @@ export type Activity = {
 	text: string;
 	status: "generating" | "complete" | "failed" | "cancelled";
 	error?: string;
+	progress?: string;
 };
 let counter = 0;
 let snapshot: Activity[] = [];
@@ -31,6 +32,10 @@ export function appendActivity(id: number, text: string) {
 	snapshot = snapshot.map((item) =>
 		item.id === id && item.status === "generating" ? { ...item, text: (item.text + text).slice(0, 100000) } : item,
 	);
+	publish();
+}
+export function progressActivity(id: number, progress: string) {
+	snapshot = snapshot.map((item) => (item.id === id && item.status === "generating" ? { ...item, progress } : item));
 	publish();
 }
 export function finishActivity(id: number, status: Activity["status"], error?: string) {

@@ -1,4 +1,4 @@
-import { appendActivity, finishActivity, startActivity } from "./ai-activity";
+import { appendActivity, finishActivity, progressActivity, startActivity } from "./ai-activity";
 import { parseAIJSON, withCancellation } from "./ai-json.mjs";
 import { readAIStream } from "./ai-stream.mjs";
 import { parseReviewYAML } from "./review.mjs";
@@ -51,9 +51,17 @@ async function trackedRequest(system: string, input: unknown, signal: AbortSigna
 		const result = await withCancellation(
 			async (s: AbortSignal) =>
 				parse(
-					await requestText(system, input, s, (text) => {
-						if (!s.aborted) appendActivity(id, text);
-					}),
+					await requestText(
+						system,
+						input,
+						s,
+						(text) => {
+							if (!s.aborted) appendActivity(id, text);
+						},
+						(progress) => {
+							if (!s.aborted) progressActivity(id, progress);
+						},
+					),
 				),
 			signal,
 		);
@@ -70,6 +78,7 @@ async function requestText(
 	input: unknown,
 	signal: AbortSignal,
 	onText: (text: string) => void,
+	onProgress: (text: string) => void,
 ): Promise<string> {
 	const s = settings();
 	const messages = [
@@ -100,7 +109,7 @@ async function requestText(
 			signal,
 		});
 		if (!r.ok) throw Error(`AI request failed (${r.status})`);
-		if (r.headers.get("content-type")?.includes("text/event-stream")) return readAIStream(r, onText);
+		if (r.headers.get("content-type")?.includes("text/event-stream")) return readAIStream(r, onText, onProgress);
 		payload = await r.json();
 	}
 	if (signal.aborted) throw Error("Cancelled");

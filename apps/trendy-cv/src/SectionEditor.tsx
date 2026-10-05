@@ -159,8 +159,20 @@ export function SectionEditor({
 }) {
 	const [error, setError] = useState("");
 	const [busy, setBusy] = useState(false);
+	const [elapsed, setElapsed] = useState(0);
+	const reviewAnchor = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		if (!busy) return;
+		setElapsed(0);
+		const started = Date.now();
+		const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000);
+		return () => clearInterval(timer);
+	}, [busy]);
 	const [confirming, setConfirming] = useState(false);
 	const [staged, setStaged] = useState<ReturnType<typeof stageExtraction> | null>(null);
+	useEffect(() => {
+		if (staged) reviewAnchor.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+	}, [staged]);
 	const [undo, setUndo] = useState<{ sectionId: string; item: Entry; index: number } | null>(null);
 	const [dirty, setDirty] = useState<Record<string, boolean>>({});
 	const [editorVersion, setEditorVersion] = useState(0);
@@ -201,6 +213,7 @@ export function SectionEditor({
 		try {
 			const input = extractionInput(snapshot);
 			setBusy(true);
+			window.dispatchEvent(new Event("cv-show-ai-output"));
 			const result = await requestJSON(EXTRACTION_PROMPT, input, c.signal);
 			if (c.signal.aborted || run.current !== id || contentKey(latest.current) !== contentKey(snapshot)) return;
 			setStaged(stageExtraction(result, snapshot));
@@ -237,14 +250,19 @@ export function SectionEditor({
 					</button>
 					{busy && (
 						<>
-							<p role="status">Extracting fields…</p>
+							<p role="status">
+								Extracting fields… {elapsed}s elapsed. Your fields update only after you review and apply the result.
+							</p>
+							<button type="button" onClick={() => window.dispatchEvent(new Event("cv-show-ai-output"))}>
+								Show extraction output
+							</button>
 							<button type="button" onClick={cancel}>
 								Cancel extraction
 							</button>
 						</>
 					)}
 					{staged && (
-						<div>
+						<div ref={reviewAnchor}>
 							<h3>Review extracted replacement</h3>
 							<p>
 								Applying replaces only the listed sections and supplied identity fields. Other sections stay unchanged.

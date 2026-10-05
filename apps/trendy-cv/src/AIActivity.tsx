@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { getActivity, subscribeActivity } from "./ai-activity";
 import "./ai-activity.css";
 export function AISymbol() {
@@ -7,6 +7,11 @@ export function AISymbol() {
 export function AIActivity() {
 	const activity = useSyncExternalStore(subscribeActivity, getActivity);
 	const [open, setOpen] = useState(false);
+	useEffect(() => {
+		const show = () => setOpen(true);
+		window.addEventListener("cv-show-ai-output", show);
+		return () => window.removeEventListener("cv-show-ai-output", show);
+	}, []);
 	const busy = activity.some((item) => item.status === "generating");
 	return (
 		<aside className="ai-activity">
@@ -27,6 +32,7 @@ export function AIActivity() {
 								{item.status}
 								{item.error ? `: ${item.error}` : ""}
 							</p>
+							{item.status === "generating" && item.progress && <p role="status">{item.progress}</p>}
 							<pre>
 								{item.text || (item.status === "generating" ? "Waiting for provider output…" : "No text returned.")}
 							</pre>
